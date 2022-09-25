@@ -44,6 +44,8 @@ namespace Nekres.Regions_Of_Tyria
         private SettingEntry<bool> _includeRegionInMapNotificationSetting;
         private SettingEntry<bool> _includeMapInSectorNotification;
 
+        internal SettingEntry<float> VerticalPositionSetting;
+
         private float _showDuration;
         private float _fadeInDuration;
         private float _fadeOutDuration;
@@ -70,14 +72,40 @@ namespace Nekres.Regions_Of_Tyria
         [ImportingConstructor]
         public RegionsOfTyriaModule([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) { ModuleInstance = this; }
 
-        protected override void DefineSettings(SettingCollection settings) {
-            _showDurationSetting = settings.DefineSetting("ShowDuration", 40.0f, () => "Show Duration", () => "The duration in which to stay in full opacity.");
-            _fadeInDurationSetting = settings.DefineSetting("FadeInDuration", 20.0f, () => "Fade-In Duration", () => "The duration of the fade-in.");
-            _fadeOutDurationSetting = settings.DefineSetting("FadeOutDuration", 20.0f, () => "Fade-Out Duration", () => "The duration of the fade-out.");
-            _toggleMapNotificationSetting = settings.DefineSetting("EnableMapChangedNotification", true, () => "Notify Map Change", () => "Whether a map's name should be shown when entering a map.");
-            _includeRegionInMapNotificationSetting = settings.DefineSetting("IncludeRegionInMapNotification", true, () => "Include Region Name in Map Notification", () => "Whether the corresponding region name of a map should be shown above a map's name.");
-            _toggleSectorNotificationSetting = settings.DefineSetting("EnableSectorChangedNotification", true, () => "Notify Sector Change", () => "Whether a sector's name should be shown when entering a sector.");
-            _includeMapInSectorNotification = settings.DefineSetting("IncludeMapInSectorNotification", true, () => "Include Map Name in Sector Notification", () => "Whether the corresponding map name of a sector should be shown above a sector's name.");
+        protected override void DefineSettings(SettingCollection settings)
+        {
+            var toggleCol = settings.AddSubCollection("toggles", true, false, 
+                () => "Toggles");
+            _toggleMapNotificationSetting = toggleCol.DefineSetting("EnableMapChangedNotification", true, 
+                () => "Notify Map Change", 
+                () => "Whether a map's name should be shown when entering a map.");
+            _includeRegionInMapNotificationSetting = toggleCol.DefineSetting("IncludeRegionInMapNotification", true, 
+                () => "Include Region Name in Map Notification", 
+                () => "Whether the corresponding region name of a map should be shown above a map's name.");
+            _toggleSectorNotificationSetting = toggleCol.DefineSetting("EnableSectorChangedNotification", true, 
+                () => "Notify Sector Change", 
+                () => "Whether a sector's name should be shown when entering a sector.");
+            _includeMapInSectorNotification = toggleCol.DefineSetting("IncludeMapInSectorNotification", true, 
+                () => "Include Map Name in Sector Notification", 
+                () => "Whether the corresponding map name of a sector should be shown above a sector's name.");
+
+            var durationCol = settings.AddSubCollection("durations", true, false, 
+                () => "Durations");
+            _showDurationSetting = durationCol.DefineSetting("ShowDuration", 40f, 
+                () => "Show Duration", 
+                () => "The duration in which to stay in full opacity.");
+            _fadeInDurationSetting = durationCol.DefineSetting("FadeInDuration", 20f, 
+                () => "Fade-In Duration", 
+                () => "The duration of the fade-in.");
+            _fadeOutDurationSetting = durationCol.DefineSetting("FadeOutDuration", 20f, 
+                () => "Fade-Out Duration", 
+                () => "The duration of the fade-out.");
+
+            var positionCol = settings.AddSubCollection("position", true, false, 
+                () => "Position");
+            VerticalPositionSetting = positionCol.DefineSetting("pos_y", 30f, 
+                () => "Vertical Position", 
+                () => "Sets the vertical position of area notifications.");
         }
 
         protected override void Initialize()

@@ -95,16 +95,20 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls
             Header = header;
             ClipsBounds = true;
             Opacity = 0f;
-            Size = new Point(1000, 1000);
+            Size = new Point(GameService.Graphics.SpriteScreen.Width, GameService.Graphics.SpriteScreen.Height);
             ZIndex = Screen.MENUUI_BASEINDEX;
-            Location = new Point(Graphics.SpriteScreen.Width / 2 - Size.X / 2, Graphics.SpriteScreen.Height / 4 - Size.Y / 4);
+            Location = new Point(0, 0);
 
             _targetTop = Top;
 
-            Resized += UpdateLocation;
+            GameService.Graphics.SpriteScreen.Resized += UpdateLocation;
         }
 
-        public void UpdateLocation(object o, ResizedEventArgs e) => Location = new Point(Graphics.SpriteScreen.Width / 2 - Size.X / 2, Graphics.SpriteScreen.Height / 4 - Size.Y / 2);
+        private void UpdateLocation(object o, ResizedEventArgs e)
+        {
+            this.Size = new Point(GameService.Graphics.SpriteScreen.Width, GameService.Graphics.SpriteScreen.Height);
+            this.Location = new Point(0, 0);
+        }
 
         /// <inheritdoc />
         protected override CaptureType CapturesInput()
@@ -113,30 +117,31 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls
         }
 
         public override void PaintBeforeChildren(SpriteBatch spriteBatch, Rectangle bounds) {
-            var height = 0;
-            var rect = Rectangle.Empty;
+            var height = (int)(RegionsOfTyriaModule.ModuleInstance.VerticalPositionSetting.Value / 100 * bounds.Height);
+            Rectangle rect;
 
-            if (!string.IsNullOrEmpty(Header) && !Header.Equals(Text, StringComparison.InvariantCultureIgnoreCase))
+            if (!string.IsNullOrEmpty(this.Header) && !this.Header.Equals(this.Text, StringComparison.InvariantCultureIgnoreCase))
             {
-                int width = 0;
                 foreach (var headerLine in _headerLines)
                 {
-                    width = (int)SmallFont.MeasureString(headerLine).Width;
+                    var size = SmallFont.MeasureString(headerLine);
+                    var lineWidth = (int)size.Width;
+                    var lineHeight = (int)size.Height;
                     rect = new Rectangle(0, TopMargin + height, bounds.Width, bounds.Height);
-                    height += SmallFont.LetterSpacing + (int)SmallFont.MeasureString(headerLine).Height;
+                    height += SmallFont.LetterSpacing + lineHeight;
                     spriteBatch.DrawStringOnCtrl(this, headerLine, SmallFont, rect, BrightGold, false, true, StrokeDist, HorizontalAlignment.Center, VerticalAlignment.Top);
-                }
 
-                // Underline
-                rect = new Rectangle(Size.X / 2 - width / 2 - 1, rect.Y + height + 2, width + 2, UnderlineSize + 2);
-                spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, new Color(0, 0, 0, 200));
-                rect = new Rectangle(rect.X + 1, rect.Y + 1, width, UnderlineSize);
-                spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, BrightGold);
+                    // Underline
+                    rect = new Rectangle((bounds.Width - lineWidth) / 2 - 2, rect.Y + lineHeight + 2, lineWidth + 2, UnderlineSize + 2);
+                    spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, new Color(0, 0, 0, 200));
+                    rect = new Rectangle(rect.X + 1, rect.Y + 1, lineWidth, UnderlineSize);
+                    spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, BrightGold);
+                }
 
                 height += TopMargin;
             }
 
-            if (!string.IsNullOrEmpty(Text)) 
+            if (!string.IsNullOrEmpty(this.Text)) 
             {
                 foreach (var textLine in _textLines)
                 {
@@ -176,6 +181,7 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls
         /// <inheritdoc />
         protected override void DisposeControl() {
             ActiveMapNotifications.Remove(this);
+            GameService.Graphics.SpriteScreen.Resized -= UpdateLocation;
 
             base.DisposeControl();
         }
