@@ -132,8 +132,8 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls
                     spriteBatch.DrawStringOnCtrl(this, headerLine, SmallFont, rect, BrightGold, false, true, StrokeDist, HorizontalAlignment.Center, VerticalAlignment.Top);
 
                     // Underline
-                    rect = new Rectangle((bounds.Width - lineWidth) / 2 - 2, rect.Y + lineHeight + 2, lineWidth + 2, UnderlineSize + 2);
-                    spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, new Color(0, 0, 0, 200));
+                    rect = new Rectangle((bounds.Width - (lineWidth + 2)) / 2, rect.Y + lineHeight + 2, lineWidth + 2, UnderlineSize + 2);
+                    spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, Color.Black * 0.8f);
                     rect = new Rectangle(rect.X + 1, rect.Y + 1, lineWidth, UnderlineSize);
                     spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, BrightGold);
                 }
