@@ -6,7 +6,7 @@
   "manifest_version": 1,
   "description": "A beautiful area notification as you walk in and out of different zones.",
   "dependencies": {
-    "bh.blishhud": ">=0.11.8"
+    "bh.blishhud": ">=0.11.6"
   },
   "url": "https://github.com/agaertner/Blish-HUD-Modules-Releases",
   "enabled_without_gw2": false,
