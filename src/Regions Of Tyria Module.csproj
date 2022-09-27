@@ -87,47 +87,30 @@
     <None Include="Content\bin\Windows\Content\fonts\consolas-8-bold.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\consolas-8.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia-8-regular_0.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-11-bold.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-11-bold_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-11-italic.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-11-italic_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-11-regular.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-11-regular_0.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-12-bold.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-12-bold_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-12-italic.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-12-italic_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-12-regular.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-12-regular_0.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-14-bold.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-14-bold_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-14-italic.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-14-italic_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-14-regular.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-14-regular_0.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-16-bold.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-16-bold_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-16-italic.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-16-italic_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-16-regular.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-16-regular_0.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-18-bold.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-18-bold_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-18-italic.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-18-italic_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-18-regular.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-18-regular_0.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-20-bold.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-20-bold_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-20-regular.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-20-regular_0.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-22-bold.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-22-bold_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-22-regular.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-22-regular_0.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-24-bold.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-24-bold_0.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-24-bold_1.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-24-regular.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-24-regular_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-32-regular.xnb" />
@@ -136,14 +119,9 @@
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-34-regular.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-34-regular_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-34-regular_1.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-36-bold.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-36-bold_0.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-36-bold_1.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-36-regular.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-36-regular_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-36-regular_1.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-8-bold.xnb" />
-    <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-8-bold_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-8-italic.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-8-italic_0.xnb" />
     <None Include="Content\bin\Windows\Content\fonts\menomonia\menomonia-8-regular.xnb" />
@@ -173,7 +151,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Blish HUD, Version=0.11.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\BlishHUD.0.11.8-ci.243\lib\net472\Blish HUD.exe</HintPath>
+      <HintPath>packages\BlishHUD.0.11.6\lib\net472\Blish HUD.exe</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="CSCore, Version=1.2.1.2, Culture=neutral, PublicKeyToken=5a08f2b6f4415dea">
@@ -257,7 +235,7 @@
     </Reference>
     <Reference Include="RBush, Version=2.0.46.0, Culture=neutral, PublicKeyToken=b1d5b814a0c60675, processorArchitecture=MSIL">
       <HintPath>.\packages\RBush.2.0.46\lib\netstandard1.2\RBush.dll</HintPath>
-      <Private>True</Private>
+      <Private>False</Private>
     </Reference>
     <Reference Include="SharpDX, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
       <HintPath>.\packages\SharpDX.4.0.1\lib\net45\SharpDX.dll</HintPath>
@@ -429,7 +407,7 @@
     </PropertyGroup>
     <Error Condition="!Exists('packages\MonoGame.Framework.WindowsDX.3.8.0.1641\build\MonoGame.Framework.WindowsDX.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\MonoGame.Framework.WindowsDX.3.8.0.1641\build\MonoGame.Framework.WindowsDX.targets'))" />
     <Error Condition="!Exists('packages\System.Resources.Extensions.6.0.0\buildTransitive\net461\System.Resources.Extensions.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\System.Resources.Extensions.6.0.0\buildTransitive\net461\System.Resources.Extensions.targets'))" />
-    <Error Condition="!Exists('packages\BlishHUD.0.11.8-ci.243\build\BlishHUD.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\BlishHUD.0.11.8-ci.243\build\BlishHUD.targets'))" />
+    <Error Condition="!Exists('packages\BlishHUD.0.11.6\build\BlishHUD.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\BlishHUD.0.11.6\build\BlishHUD.targets'))" />
   </Target>
   <Import Project="packages\System.Resources.Extensions.6.0.0\buildTransitive\net461\System.Resources.Extensions.targets" Condition="Exists('packages\System.Resources.Extensions.6.0.0\buildTransitive\net461\System.Resources.Extensions.targets')" />
   <ProjectExtensions>
@@ -437,5 +415,5 @@
       <UserProperties manifest_1json__JsonSchema="" />
     </VisualStudio>
   </ProjectExtensions>
-  <Import Project="packages\BlishHUD.0.11.8-ci.243\build\BlishHUD.targets" Condition="Exists('packages\BlishHUD.0.11.8-ci.243\build\BlishHUD.targets')" />
+  <Import Project="packages\BlishHUD.0.11.6\build\BlishHUD.targets" Condition="Exists('packages\BlishHUD.0.11.6\build\BlishHUD.targets')" />
 </Project>

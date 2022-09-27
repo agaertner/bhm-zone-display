@@ -74,8 +74,7 @@ namespace Nekres.Regions_Of_Tyria
 
         protected override void DefineSettings(SettingCollection settings)
         {
-            var toggleCol = settings.AddSubCollection("toggles", true, false, 
-                () => "Toggles");
+            var toggleCol = settings.AddSubCollection("Toggles", true, false);
             _toggleMapNotificationSetting = toggleCol.DefineSetting("EnableMapChangedNotification", true, 
                 () => "Notify Map Change", 
                 () => "Whether a map's name should be shown when entering a map.");
@@ -89,8 +88,7 @@ namespace Nekres.Regions_Of_Tyria
                 () => "Include Map Name in Sector Notification", 
                 () => "Whether the corresponding map name of a sector should be shown above a sector's name.");
 
-            var durationCol = settings.AddSubCollection("durations", true, false, 
-                () => "Durations");
+            var durationCol = settings.AddSubCollection("Durations", true, false);
             _showDurationSetting = durationCol.DefineSetting("ShowDuration", 40f, 
                 () => "Show Duration", 
                 () => "The duration in which to stay in full opacity.");
@@ -101,8 +99,7 @@ namespace Nekres.Regions_Of_Tyria
                 () => "Fade-Out Duration", 
                 () => "The duration of the fade-out.");
 
-            var positionCol = settings.AddSubCollection("position", true, false, 
-                () => "Position");
+            var positionCol = settings.AddSubCollection("Position", true, false);
             VerticalPositionSetting = positionCol.DefineSetting("pos_y", 30f, 
                 () => "Vertical Position", 
                 () => "Sets the vertical position of area notifications.");
