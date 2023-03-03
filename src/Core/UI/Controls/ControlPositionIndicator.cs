@@ -30,6 +30,10 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
         }
 
         public override void PaintBeforeChildren(SpriteBatch spriteBatch, Rectangle bounds) {
+            if (RegionsOfTyriaModule.ModuleInstance == null) {
+                return;
+            }
+
             var height = (int)(RegionsOfTyriaModule.ModuleInstance.VerticalPositionSetting.Value / 100 * bounds.Height);
             var rect   = new Rectangle(0, height + 12 * 2, 500, 100);
 
