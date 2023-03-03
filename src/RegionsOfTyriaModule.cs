@@ -1,22 +1,21 @@
 ﻿using Blish_HUD;
+using Blish_HUD.Extended.Core.Views;
+using Blish_HUD.Graphics.UI;
 using Blish_HUD.Modules;
 using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
+using Gw2Sharp.WebApi.Exceptions;
 using Gw2Sharp.WebApi.V2.Models;
 using Microsoft.Xna.Framework;
 using Nekres.Regions_Of_Tyria.Geometry;
+using Nekres.Regions_Of_Tyria.UI.Controls;
 using RBush;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading.Tasks;
-using Blish_HUD.Extended.Core.Views;
-using Blish_HUD.Graphics.UI;
-using Nekres.Regions_Of_Tyria.UI.Controls;
-using static Blish_HUD.GameService;
-namespace Nekres.Regions_Of_Tyria
-{
+namespace Nekres.Regions_Of_Tyria {
     [Export(typeof(Module))]
     public class RegionsOfTyriaModule : Module
     {
@@ -46,9 +45,12 @@ namespace Nekres.Regions_Of_Tyria
 
         internal SettingEntry<float> VerticalPositionSetting;
 
-        private float _showDuration;
-        private float _fadeInDuration;
-        private float _fadeOutDuration;
+        private DateTime                 _lastVerticalChange = DateTime.UtcNow;
+        private ControlPositionIndicator _verticalIndicator;
+
+        private float                    _showDuration;
+        private float                    _fadeInDuration;
+        private float                    _fadeOutDuration;
 
         private AsyncCache<int, Map> _mapRepository;
         private AsyncCache<int, RBush<Sector>> _sectorRepository;
@@ -59,7 +61,10 @@ namespace Nekres.Regions_Of_Tyria
             get => _prevSectorId;
             private set
             {
-                if (value == _prevSectorId) return;
+                if (value == _prevSectorId) {
+                    return;
+                }
+
                 _prevSectorId = value;
                 SectorChanged?.Invoke(ModuleInstance, new ValueEventArgs<int>(value));
             }
@@ -121,31 +126,39 @@ namespace Nekres.Regions_Of_Tyria
 
         protected override async void Update(GameTime gameTime) {
             
-            if (gameTime.TotalGameTime.TotalMilliseconds - _lastRun < 10 || DateTime.UtcNow.Subtract(_lastUpdate).TotalMilliseconds < 1000 || !_toggleSectorNotificationSetting.Value || !Gw2Mumble.IsAvailable || !GameIntegration.Gw2Instance.IsInGame)
+            if (gameTime.TotalGameTime.TotalMilliseconds - _lastRun < 10 || DateTime.UtcNow.Subtract(_lastUpdate).TotalMilliseconds < 1000 || !_toggleSectorNotificationSetting.Value || !GameService.Gw2Mumble.IsAvailable || !GameService.GameIntegration.Gw2Instance.IsInGame) {
                 return;
+            }
 
             _lastRun = gameTime.ElapsedGameTime.TotalMilliseconds;
             _lastUpdate = DateTime.UtcNow;
 
-            var currentMap = await _mapRepository.GetItem(Gw2Mumble.CurrentMap.Id);
+            if (DateTime.UtcNow.Subtract(_lastVerticalChange).TotalMilliseconds > 250) {
+                _verticalIndicator?.Dispose();
+                _verticalIndicator = null;
+            }
+
+            var currentMap    = await _mapRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
             var currentSector = await GetSector(currentMap);
 
-            if (currentSector != null)
+            if (currentSector != null) {
                 MapNotification.ShowNotification(_includeMapInSectorNotification.Value ? currentMap.Name : null, currentSector.Name, null, _showDuration, _fadeInDuration, _fadeOutDuration);
+            }
         }
 
         protected override void OnModuleLoaded(EventArgs e)
         {
-            Gw2Mumble.CurrentMap.MapChanged += OnMapChanged;
-            Overlay.UserLocaleChanged += OnUserLocaleChanged;
+            GameService.Gw2Mumble.CurrentMap.MapChanged += OnMapChanged;
+            GameService.Overlay.UserLocaleChanged       += OnUserLocaleChanged;
 
             OnShowDurationSettingChanged(_showDurationSetting, new ValueChangedEventArgs<float>(0,_showDurationSetting.Value));
             OnFadeInDurationSettingChanged(_fadeInDurationSetting, new ValueChangedEventArgs<float>(0,_fadeInDurationSetting.Value));
             OnFadeOutDurationSettingChanged(_fadeOutDurationSetting, new ValueChangedEventArgs<float>(0,_fadeOutDurationSetting.Value));
 
-            _showDurationSetting.SettingChanged += OnShowDurationSettingChanged;
-            _fadeInDurationSetting.SettingChanged += OnFadeInDurationSettingChanged;
+            _showDurationSetting.SettingChanged    += OnShowDurationSettingChanged;
+            _fadeInDurationSetting.SettingChanged  += OnFadeInDurationSettingChanged;
             _fadeOutDurationSetting.SettingChanged += OnFadeOutDurationSettingChanged;
+            VerticalPositionSetting.SettingChanged += OnVerticalPositionSettingChanged;
 
             // Base handler must be called
             base.OnModuleLoaded(e);
@@ -157,14 +170,25 @@ namespace Nekres.Regions_Of_Tyria
 
         /// <inheritdoc />
         protected override void Unload() {
-            _showDurationSetting.SettingChanged -= OnShowDurationSettingChanged;
-            _fadeInDurationSetting.SettingChanged -= OnFadeInDurationSettingChanged;
-            _fadeOutDurationSetting.SettingChanged -= OnFadeOutDurationSettingChanged;
-            Gw2Mumble.CurrentMap.MapChanged -= OnMapChanged;
-            Overlay.UserLocaleChanged -= OnUserLocaleChanged;
+            _verticalIndicator?.Dispose();
+
+            VerticalPositionSetting.SettingChanged -= OnVerticalPositionSettingChanged;
+
+            _showDurationSetting.SettingChanged         -= OnShowDurationSettingChanged;
+            _fadeInDurationSetting.SettingChanged       -= OnFadeInDurationSettingChanged;
+            _fadeOutDurationSetting.SettingChanged      -= OnFadeOutDurationSettingChanged;
+            GameService.Gw2Mumble.CurrentMap.MapChanged -= OnMapChanged;
+            GameService.Overlay.UserLocaleChanged       -= OnUserLocaleChanged;
 
             // All static members must be manually unset
             ModuleInstance = null;
+        }
+
+        private void OnVerticalPositionSettingChanged(object o, ValueChangedEventArgs<float> e) {
+            _lastVerticalChange = DateTime.UtcNow;
+            _verticalIndicator ??= new ControlPositionIndicator {
+                Parent = GameService.Graphics.SpriteScreen
+            };
         }
 
         private void OnUserLocaleChanged(object o, ValueEventArgs<System.Globalization.CultureInfo> e)
@@ -175,94 +199,116 @@ namespace Nekres.Regions_Of_Tyria
 
         private async void OnMapChanged(object o, ValueEventArgs<int> e)
         {
-            if (!_toggleMapNotificationSetting.Value) 
+            if (!_toggleMapNotificationSetting.Value) {
                 return;
+            }
 
             var currentMap = await _mapRepository.GetItem(e.Value);
-            if (currentMap == null || currentMap.Id == _prevMapId)
+            if (currentMap == null || currentMap.Id == _prevMapId) {
                 return;
+            }
 
             _prevMapId = currentMap.Id;
 
             var header = currentMap.RegionName;
             var text = currentMap.Name;
 
-            //Some maps consist of just a single sector and hide their actual name in it.
+            // Some maps consist of just a single sector and hide their actual name in it.
             if (text.Equals(header, StringComparison.InvariantCultureIgnoreCase))
             {
                 var currentSector = await GetSector(currentMap);
-                if (currentSector != null && !string.IsNullOrEmpty(currentSector.Name))
+                if (currentSector != null && !string.IsNullOrEmpty(currentSector.Name)) {
                     text = currentSector.Name;
+                }
             }
             MapNotification.ShowNotification(_includeRegionInMapNotificationSetting.Value ? header : null, text, null, _showDuration, _fadeInDuration, _fadeOutDuration);
         }
 
         private async Task<Sector> GetSector(Map currentMap)
         {
-            if (currentMap == null) 
+            if (currentMap == null) {
                 return null;
-            var playerPos = Gw2Mumble.RawClient.IsCompetitiveMode ? Gw2Mumble.RawClient.CameraPosition : Gw2Mumble.RawClient.AvatarPosition;
+            }
+
+            var playerPos      = GameService.Gw2Mumble.RawClient.IsCompetitiveMode ? GameService.Gw2Mumble.RawClient.CameraPosition : GameService.Gw2Mumble.RawClient.AvatarPosition;
             var playerLocation = playerPos.ToContinentCoords(CoordsUnit.Mumble, currentMap.MapRect, currentMap.ContinentRect).SwapYZ().ToPlane();
-            var rtree = await _sectorRepository.GetItem(Gw2Mumble.CurrentMap.Id);
-            var foundPoints = rtree.Search(new Envelope(playerLocation.X, playerLocation.Y, playerLocation.X, playerLocation.Y));
-            if (foundPoints == null || foundPoints.Count == 0 || _prevSectorId.Equals(foundPoints[0].Id))
+            var rtree         = await _sectorRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
+            var foundPoints= rtree.Search(new Envelope(playerLocation.X, playerLocation.Y, playerLocation.X, playerLocation.Y));
+
+            if (foundPoints.Count == 0 || _prevSectorId.Equals(foundPoints[0].Id)) {
                 return null;
+            }
 
             CurrentSector = foundPoints[0].Id;
             return foundPoints[0];
         }
 
-        private async Task<RBush<Sector>> RequestSectors(int mapId)
-        {
-            return await await _mapRepository.GetItem(mapId).ContinueWith(async result =>
-            {
-                if (result.IsFaulted) 
-                    return null;
+        private async Task<RBush<Sector>> RequestSectors(int mapId) {
 
-                var map = result.Result;
-                IEnumerable<Sector> sectors = new HashSet<Sector>();
-                var comparer = ProjectionEqualityComparer<Sector>.Create(x => x.Id);
-                foreach (var floor in map.Floors)
-                    sectors = sectors.Union(await RequestSectorsForFloor(map.ContinentId, floor, map.RegionId, map.Id), comparer);
+            Map map;
 
-                var rtree = new RBush<Sector>();
-                foreach (var sector in sectors) 
-                    rtree.Insert(sector);
+            try {
 
-                return rtree;
-            });
+                map = await _mapRepository.GetItem(mapId);
+
+            } catch (RequestException e) {
+
+                Logger.Debug(e, e.Message);
+                return null;
+
+            }
+
+            if (map == null) {
+                return null;
+            }
+
+            IEnumerable<Sector> sectors = new HashSet<Sector>();
+
+            var comparer = ProjectionEqualityComparer<Sector>.Create(x => x.Id);
+            foreach (var floor in map.Floors) {
+                sectors = sectors.Union(await RequestSectorsForFloor(map.ContinentId, floor, map.RegionId, map.Id), comparer);
+            }
+
+            var rtree = new RBush<Sector>();
+            rtree.BulkLoad(sectors);
+            return rtree;
         }
 
         private async Task<IEnumerable<Sector>> RequestSectorsForFloor(int continentId, int floor, int regionId, int mapId) {
             try {
-                return await Gw2ApiManager.Gw2ApiClient.V2.Continents[continentId].Floors[floor].Regions[regionId].Maps[mapId].Sectors.AllAsync().ContinueWith(task =>
-                    {
-                        var result = new HashSet<Sector>();
-                        if (task.IsFaulted)
-                            return result;
-                        foreach (var sector in task.Result)
-                            result.Add(new Sector(sector));
-                        return result;
-                    });
-            } catch (Gw2Sharp.WebApi.Exceptions.BadRequestException bre) {
-                Logger.Debug("{0} | The map id {1} does not exist on floor {2}.", bre.GetType().FullName, mapId, floor);
+
+                var sectors = await Gw2ApiManager.Gw2ApiClient.V2.Continents[continentId].Floors[floor].Regions[regionId].Maps[mapId].Sectors.AllAsync();
+                return sectors.Select(x => new Sector(x));
+
+            } catch (NotFoundException e) {
+
+                Logger.Debug(e, "The map id {0} does not exist on floor {1}.", mapId, floor);
                 return Enumerable.Empty<Sector>();
-            } catch (Gw2Sharp.WebApi.Exceptions.UnexpectedStatusException use) {
-                Logger.Debug(use.Message);
+
+            } catch (BadRequestException) {
+
+                // 'invalid region specified'
                 return Enumerable.Empty<Sector>();
+
+            } catch (RequestException ex) {
+
+                Logger.Debug(ex, ex.Message);
+                return Enumerable.Empty<Sector>();
+
             }
         }
 
         private async Task<Map> RequestMap(int id)
         {
             try {
-                return await Gw2ApiManager.Gw2ApiClient.V2.Maps.GetAsync(id).ContinueWith(task => task.IsFaulted || !task.IsCompleted ? null : task.Result);
-            } catch (Gw2Sharp.WebApi.Exceptions.BadRequestException bre) {
-                Logger.Debug(bre.Message);
+
+                return await Gw2ApiManager.Gw2ApiClient.V2.Maps.GetAsync(id);
+
+            } catch (RequestException e) {
+
+                Logger.Debug(e.Message);
                 return null;
-            } catch (Gw2Sharp.WebApi.Exceptions.UnexpectedStatusException use)  {
-                Logger.Debug(use.Message);
-                return null;
+
             }
         }
     }
