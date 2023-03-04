@@ -245,18 +245,7 @@ namespace Nekres.Regions_Of_Tyria {
 
         private async Task<RBush<Sector>> RequestSectors(int mapId) {
 
-            Map map;
-
-            try {
-
-                map = await _mapRepository.GetItem(mapId);
-
-            } catch (RequestException e) {
-
-                Logger.Debug(e, e.Message);
-                return null;
-
-            }
+            var map = await _mapRepository.GetItem(mapId);
 
             if (map == null) {
                 return null;
@@ -303,6 +292,11 @@ namespace Nekres.Regions_Of_Tyria {
             try {
 
                 return await Gw2ApiManager.Gw2ApiClient.V2.Maps.GetAsync(id);
+
+            } catch (NotFoundException) {
+
+                // 'no such id'
+                return null;
 
             } catch (RequestException e) {
 
