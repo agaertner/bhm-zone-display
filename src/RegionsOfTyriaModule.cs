@@ -1,10 +1,10 @@
 ﻿using Blish_HUD;
+using Blish_HUD.Extended;
 using Blish_HUD.Extended.Core.Views;
 using Blish_HUD.Graphics.UI;
 using Blish_HUD.Modules;
 using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
-using Gw2Sharp.WebApi.Exceptions;
 using Gw2Sharp.WebApi.V2.Models;
 using Microsoft.Xna.Framework;
 using Nekres.Regions_Of_Tyria.Geometry;
@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading.Tasks;
+
 namespace Nekres.Regions_Of_Tyria {
 
     [Export(typeof(Module))]
@@ -151,8 +152,7 @@ namespace Nekres.Regions_Of_Tyria {
             var currentSector = await GetSector(currentMap);
 
             if (currentSector != null) {
-                MapNotification.ShowNotification(_includeMapInSectorNotification.Value ? currentMap.Name : null, currentSector.Name, null, _showDuration, _fadeInDuration,
-                                                 _fadeOutDuration);
+                MapNotification.ShowNotification(_includeMapInSectorNotification.Value ? currentMap.Name : null, currentSector.Name, null, _showDuration, _fadeInDuration, _fadeOutDuration);
             }
         }
 
@@ -231,8 +231,7 @@ namespace Nekres.Regions_Of_Tyria {
                 }
             }
 
-            MapNotification.ShowNotification(_includeRegionInMapNotificationSetting.Value ? header : null, text, null, _showDuration, _fadeInDuration,
-                                             _fadeOutDuration);
+            MapNotification.ShowNotification(_includeRegionInMapNotificationSetting.Value ? header : null, text, null, _showDuration, _fadeInDuration, _fadeOutDuration);
         }
 
         private async Task<Sector> GetSector(Map currentMap) {
@@ -243,8 +242,13 @@ namespace Nekres.Regions_Of_Tyria {
             var playerPos      = GameService.Gw2Mumble.RawClient.IsCompetitiveMode ? GameService.Gw2Mumble.RawClient.CameraPosition : GameService.Gw2Mumble.RawClient.AvatarPosition;
             var playerLocation = playerPos.ToContinentCoords(CoordsUnit.Mumble, currentMap.MapRect, currentMap.ContinentRect).SwapYZ().ToPlane();
             var rtree          = await _sectorRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
-            var foundPoints    = rtree.Search(new Envelope(playerLocation.X, playerLocation.Y, playerLocation.X, playerLocation.Y));
 
+            if (rtree == null) {
+                return null;
+            }
+
+            var foundPoints    = rtree.Search(new Envelope(playerLocation.X, playerLocation.Y, playerLocation.X, playerLocation.Y));
+            
             if (foundPoints.Count == 0 || _prevSectorId.Equals(foundPoints[0].Id)) {
                 return null;
             }
@@ -261,86 +265,28 @@ namespace Nekres.Regions_Of_Tyria {
                 return null;
             }
 
-            IEnumerable<Sector> sectors = new HashSet<Sector>();
+            IEnumerable<Sector> geometryZone = new HashSet<Sector>();
 
             var comparer = ProjectionEqualityComparer<Sector>.Create(x => x.Id);
 
             foreach (var floor in map.Floors) {
-                sectors = sectors.Union(await RequestSectorsForFloor(map.ContinentId, floor, map.RegionId, map.Id), comparer);
+                var sectors = await TaskUtil.RetryAsync(() => Gw2ApiManager.Gw2ApiClient.V2.Continents[map.ContinentId].Floors[floor].Regions[map.RegionId].Maps[map.Id].Sectors.AllAsync());
+                if (sectors == null || !sectors.Any()) {
+                    continue;
+                }
+                geometryZone = geometryZone.Union(sectors.Select(x => new Sector(x)), comparer);
             }
 
             var rtree = new RBush<Sector>();
-            rtree.BulkLoad(sectors);
+            foreach (var sector in geometryZone) {
+                rtree.Insert(sector);
+            }
+            //rtree.BulkLoad(geometryZone); // Unfortunately, this results in loss of precision in zone detection.
             return rtree;
         }
 
-        private async Task<IEnumerable<Sector>> RequestSectorsForFloor(int continentId, int floor, int regionId, int mapId) {
-            try {
-
-                var sectors = await RetryAsync(() => Gw2ApiManager.Gw2ApiClient.V2.Continents[continentId].Floors[floor].Regions[regionId].Maps[mapId].Sectors.AllAsync()).Unwrap();
-                return sectors.Select(x => new Sector(x));
-
-            } catch (Exception e) {
-
-                if (e is NotFoundException) {
-                    Logger.Debug(e, "The map id {0} does not exist on floor {1}.", mapId, floor);
-                    return Enumerable.Empty<Sector>();
-                }
-
-                if (e is BadRequestException) {
-                    // 'invalid region specified'
-                    return Enumerable.Empty<Sector>();
-                }
-
-                BadRequest(e);
-                return Enumerable.Empty<Sector>();
-            }
-        }
-
         private async Task<Map> RequestMap(int id) {
-            try {
-
-                return await RetryAsync(() => Gw2ApiManager.Gw2ApiClient.V2.Maps.GetAsync(id)).Unwrap();
-
-            } catch (Exception e) {
-
-                if (e is NotFoundException) {
-                    // 'no such id'
-                    return null;
-                }
-
-                BadRequest(e);
-                return null;
-            }
-        }
-
-        private async Task<T> RetryAsync<T>(Func<T> func, int retries = 2) {
-            try {
-                return func();
-            } catch (Exception e) {
-                if (retries > 0) {
-                    Logger.Warn(e, $"Failed to pull data from the GW2 API. Retrying in 30 seconds (remaining retries: {retries}).");
-                    await Task.Delay(30000);
-                    return await RetryAsync(func, retries - 1);
-                }
-
-                if (e is TooManyRequestsException) {
-                    Logger.Warn(e, "After multiple attempts no data could be loaded due to being rate limited by the API.");
-                }
-
-                throw; // Handle refined exceptions in the outer scope.
-            }
-        }
-
-        private void BadRequest(Exception e) {
-            switch (e) {
-                case RequestException or RequestException<string>:
-                    Logger.Debug(e, e.Message);
-                    break;
-                default:
-                    Logger.Error(e, e.Message);
-                    break;
-            }
+            return await TaskUtil.RetryAsync(() => Gw2ApiManager.Gw2ApiClient.V2.Maps.GetAsync(id));
         }
     }
 }
