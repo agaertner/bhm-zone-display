@@ -1,7 +1,5 @@
 ﻿using Blish_HUD;
 using Blish_HUD.Extended;
-using Blish_HUD.Extended.Core.Views;
-using Blish_HUD.Graphics.UI;
 using Blish_HUD.Modules;
 using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
@@ -82,42 +80,39 @@ namespace Nekres.Regions_Of_Tyria {
         }
 
         protected override void DefineSettings(SettingCollection settings) {
-            var toggleCol = settings.AddSubCollection("Toggles");
-            toggleCol.RenderInUi = true;
+            var toggleCol = settings.AddSubCollection("notifications", true, () => "Notifications");
 
-            _toggleMapNotificationSetting = toggleCol.DefineSetting("EnableMapChangedNotification", true,
+            _toggleMapNotificationSetting = toggleCol.DefineSetting("enable_map_change", true,
                                                                     () => "Notify Map Change",
-                                                                    () => "Whether a map's name should be shown when entering a map.");
+                                                                    () => "Shows a map's name after entering it.");
 
-            _includeRegionInMapNotificationSetting = toggleCol.DefineSetting("IncludeRegionInMapNotification", true,
-                                                                             () => "Include Region Name in Map Notification",
-                                                                             () => "Whether the corresponding region name of a map should be shown above a map's name.");
+            _includeRegionInMapNotificationSetting = toggleCol.DefineSetting("region_in_subtitle", true,
+                                                                             () => "Display Region",
+                                                                             () => "Shows the region below the map notification.");
 
-            _toggleSectorNotificationSetting = toggleCol.DefineSetting("EnableSectorChangedNotification", true,
+            _toggleSectorNotificationSetting = toggleCol.DefineSetting("enable_sector_change", true,
                                                                        () => "Notify Sector Change",
-                                                                       () => "Whether a sector's name should be shown when entering a sector.");
+                                                                       () => "Shows a sector's name after entering.");
 
-            _includeMapInSectorNotification = toggleCol.DefineSetting("IncludeMapInSectorNotification", true,
-                                                                      () => "Include Map Name in Sector Notification",
-                                                                      () => "Whether the corresponding map name of a sector should be shown above a sector's name.");
+            _includeMapInSectorNotification = toggleCol.DefineSetting("map_in_subtitle", true,
+                                                                      () => "Display Map",
+                                                                      () => "Shows the map name below the sector notification.");
 
-            var durationCol = settings.AddSubCollection("Durations");
-            durationCol.RenderInUi = true;
+            var durationCol = settings.AddSubCollection("durations", true, () => "Durations");
 
-            _showDurationSetting = durationCol.DefineSetting("ShowDuration", 40f,
+            _showDurationSetting = durationCol.DefineSetting("show", 40f,
                                                              () => "Show Duration",
                                                              () => "The duration in which to stay in full opacity.");
 
-            _fadeInDurationSetting = durationCol.DefineSetting("FadeInDuration", 20f,
+            _fadeInDurationSetting = durationCol.DefineSetting("fade_in", 20f,
                                                                () => "Fade-In Duration",
                                                                () => "The duration of the fade-in.");
 
-            _fadeOutDurationSetting = durationCol.DefineSetting("FadeOutDuration", 20f,
+            _fadeOutDurationSetting = durationCol.DefineSetting("fade_out", 20f,
                                                                 () => "Fade-Out Duration",
                                                                 () => "The duration of the fade-out.");
 
-            var positionCol = settings.AddSubCollection("Position");
-            positionCol.RenderInUi = true;
+            var positionCol = settings.AddSubCollection("position", true, () => "Position");
 
             VerticalPositionSetting = positionCol.DefineSetting("pos_y", 30f,
                                                                 () => "Vertical Position",
@@ -127,10 +122,6 @@ namespace Nekres.Regions_Of_Tyria {
         protected override void Initialize() {
             _mapRepository    = new AsyncCache<int, Map>(RequestMap);
             _sectorRepository = new AsyncCache<int, RBush<Sector>>(RequestSectors);
-        }
-
-        public override IView GetSettingsView() {
-            return new SocialsSettingsView(new SocialsSettingsModel(SettingsManager.ModuleSettings, "https://pastebin.com/raw/Kk9DgVmL"));
         }
 
         protected override async void Update(GameTime gameTime) {
@@ -152,7 +143,7 @@ namespace Nekres.Regions_Of_Tyria {
             var currentSector = await GetSector(currentMap);
 
             if (currentSector != null) {
-                MapNotification.ShowNotification(_includeMapInSectorNotification.Value ? currentMap.Name : null, currentSector.Name, null, _showDuration, _fadeInDuration, _fadeOutDuration);
+                MapNotification.ShowNotification(currentSector.Name, _includeMapInSectorNotification.Value ? currentMap.Name : null, null, _showDuration, _fadeInDuration, _fadeOutDuration);
             }
         }
 
@@ -220,18 +211,18 @@ namespace Nekres.Regions_Of_Tyria {
             _prevMapId = currentMap.Id;
 
             var header = currentMap.RegionName;
-            var text   = currentMap.Name;
+            var mapName   = currentMap.Name;
 
             // Some maps consist of just a single sector and hide their actual name in it.
-            if (text.Equals(header, StringComparison.InvariantCultureIgnoreCase)) {
+            if (mapName.Equals(header, StringComparison.InvariantCultureIgnoreCase)) {
                 var currentSector = await GetSector(currentMap);
 
                 if (currentSector != null && !string.IsNullOrEmpty(currentSector.Name)) {
-                    text = currentSector.Name;
+                    mapName = currentSector.Name;
                 }
             }
 
-            MapNotification.ShowNotification(_includeRegionInMapNotificationSetting.Value ? header : null, text, null, _showDuration, _fadeInDuration, _fadeOutDuration);
+            MapNotification.ShowNotification(mapName, _includeRegionInMapNotificationSetting.Value ? header : null, null, _showDuration, _fadeInDuration, _fadeOutDuration);
         }
 
         private async Task<Sector> GetSector(Map currentMap) {
@@ -239,9 +230,8 @@ namespace Nekres.Regions_Of_Tyria {
                 return null;
             }
 
-            var playerPos      = GameService.Gw2Mumble.RawClient.IsCompetitiveMode ? GameService.Gw2Mumble.RawClient.CameraPosition : GameService.Gw2Mumble.RawClient.AvatarPosition;
-            var playerLocation = playerPos.ToContinentCoords(CoordsUnit.Mumble, currentMap.MapRect, currentMap.ContinentRect).SwapYZ().ToPlane();
-            var rtree          = await _sectorRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
+            var playerLocation = GameService.Gw2Mumble.RawClient.AvatarPosition.ToContinentCoords(CoordsUnit.MUMBLE, currentMap.MapRect, currentMap.ContinentRect).SwapYz().ToPlane();
+            var rtree = await _sectorRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
 
             if (rtree == null) {
                 return null;

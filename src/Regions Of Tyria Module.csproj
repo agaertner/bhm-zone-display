@@ -75,13 +75,13 @@
     <Compile Include="Core\UI\Controls\ControlPositionIndicator.cs" />
     <Compile Include="Core\UI\Controls\MapNotification.cs" />
     <Compile Include="Core\Geometry\Sector.cs" />
-    <Compile Include="_Utils\AsyncCache.cs" />
+    <Compile Include="Core\Utils\AsyncCache.cs" />
     <Compile Include="RegionsOfTyriaModule.cs" />
-    <Compile Include="_Utils\ProjectionEqualityComparer.cs" />
-    <Compile Include="_Extensions\ColorExtensions.cs" />
-    <Compile Include="_Extensions\Coordinates3Extensions.cs" />
-    <Compile Include="_Extensions\IEnumerableExtensions.cs" />
-    <Compile Include="_Extensions\StringExtensions.cs" />
+    <Compile Include="Core\Utils\ProjectionEqualityComparer.cs" />
+    <Compile Include="Core\Extensions\ColorExtensions.cs" />
+    <Compile Include="Core\Extensions\Coordinates3Extensions.cs" />
+    <Compile Include="Core\Extensions\IEnumerableExtensions.cs" />
+    <Compile Include="Core\Extensions\StringExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="AsyncClipboardService, Version=1.7.1.0, Culture=neutral, processorArchitecture=MSIL">
