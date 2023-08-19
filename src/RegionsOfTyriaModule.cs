@@ -80,23 +80,24 @@ namespace Nekres.Regions_Of_Tyria {
         }
 
         protected override void DefineSettings(SettingCollection settings) {
-            var toggleCol = settings.AddSubCollection("notifications", true, () => "Notifications");
+            var mapCol = settings.AddSubCollection("map_alert", true, () => "Map Notification");
 
-            _toggleMapNotificationSetting = toggleCol.DefineSetting("enable_map_change", true,
-                                                                    () => "Notify Map Change",
+            _toggleMapNotificationSetting = mapCol.DefineSetting("enabled", true,
+                                                                    () => "Enabled",
                                                                     () => "Shows a map's name after entering it.");
 
-            _includeRegionInMapNotificationSetting = toggleCol.DefineSetting("region_in_subtitle", true,
-                                                                             () => "Display Region",
-                                                                             () => "Shows the region below the map notification.");
+            _includeRegionInMapNotificationSetting = mapCol.DefineSetting("prefix_region", true,
+                                                                          () => "Include Region",
+                                                                          () => "Shows the region's name above the map's name.");
 
-            _toggleSectorNotificationSetting = toggleCol.DefineSetting("enable_sector_change", true,
-                                                                       () => "Notify Sector Change",
+            var sectorCol = settings.AddSubCollection("sector_alert", true, () => "Sector Notification");
+
+            _toggleSectorNotificationSetting = sectorCol.DefineSetting("enabled", true,
+                                                                       () => "Enabled",
                                                                        () => "Shows a sector's name after entering.");
-
-            _includeMapInSectorNotification = toggleCol.DefineSetting("map_in_subtitle", true,
-                                                                      () => "Display Map",
-                                                                      () => "Shows the map name below the sector notification.");
+            _includeMapInSectorNotification = sectorCol.DefineSetting("prefix_map", true,
+                                                                      () => "Include Map",
+                                                                      () => "Shows the map's name above the sector's name.");
 
             var durationCol = settings.AddSubCollection("durations", true, () => "Durations");
 
@@ -143,7 +144,7 @@ namespace Nekres.Regions_Of_Tyria {
             var currentSector = await GetSector(currentMap);
 
             if (currentSector != null) {
-                MapNotification.ShowNotification(currentSector.Name, _includeMapInSectorNotification.Value ? currentMap.Name : null, null, _showDuration, _fadeInDuration, _fadeOutDuration);
+                MapNotification.ShowNotification(_includeMapInSectorNotification.Value ? currentMap.Name : null, currentSector.Name, null, _showDuration, _fadeInDuration, _fadeOutDuration);
             }
         }
 
@@ -222,7 +223,7 @@ namespace Nekres.Regions_Of_Tyria {
                 }
             }
 
-            MapNotification.ShowNotification(mapName, _includeRegionInMapNotificationSetting.Value ? header : null, null, _showDuration, _fadeInDuration, _fadeOutDuration);
+            MapNotification.ShowNotification(_includeRegionInMapNotificationSetting.Value ? header : null, mapName, null, _showDuration, _fadeInDuration, _fadeOutDuration);
         }
 
         private async Task<Sector> GetSector(Map currentMap) {
