@@ -72,17 +72,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Core\Extensions\ContentsManagerExtensions.cs" />
+    <Compile Include="Core\Extensions\PlayerCharacterExtensions.cs" />
     <Compile Include="Core\Extensions\SpriteFontExtensions.cs" />
+    <Compile Include="Core\Utils\PolygonUtil.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Core\UI\Controls\NotificationIndicator.cs" />
     <Compile Include="Core\UI\Controls\MapNotification.cs" />
     <Compile Include="Core\Geometry\Sector.cs" />
     <Compile Include="Core\Utils\AsyncCache.cs" />
     <Compile Include="RegionsOfTyria.cs" />
-    <Compile Include="Core\Utils\ProjectionEqualityComparer.cs" />
-    <Compile Include="Core\Extensions\ColorExtensions.cs" />
-    <Compile Include="Core\Extensions\Coordinates3Extensions.cs" />
-    <Compile Include="Core\Extensions\IEnumerableExtensions.cs" />
+    <Compile Include="Core\Extensions\CoordinatesExtensions.cs" />
+    <Compile Include="Core\Extensions\EnumerableExtensions.cs" />
     <Compile Include="Core\Extensions\StringExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -172,9 +172,6 @@
     <Reference Include="protobuf-net.Core, Version=3.0.0.0, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <HintPath>packages\protobuf-net.Core.3.0.101\lib\net461\protobuf-net.Core.dll</HintPath>
       <Private>False</Private>
-    </Reference>
-    <Reference Include="RBush, Version=3.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\RBush.3.2.0\lib\netstandard1.2\RBush.dll</HintPath>
     </Reference>
     <Reference Include="SharpDX, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
       <HintPath>packages\SharpDX.4.0.1\lib\net45\SharpDX.dll</HintPath>

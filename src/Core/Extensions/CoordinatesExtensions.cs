@@ -1,8 +1,10 @@
 ﻿using Gw2Sharp.Models;
-using Gw2Sharp.WebApi.V2.Models;
-namespace Nekres.Regions_Of_Tyria
-{
-    internal static class Coordinates3Extensions
+using Microsoft.Xna.Framework;
+using System;
+using Rectangle = Gw2Sharp.WebApi.V2.Models.Rectangle;
+
+namespace Nekres.Regions_Of_Tyria {
+    internal static class CoordinatesExtensions
     {
         private const float INCH_TO_METER = 0.0254F;
 
@@ -36,6 +38,9 @@ namespace Nekres.Regions_Of_Tyria
             return new Coordinates3(x, mapCoords.Y, z);
         }
 
+        public static Point ToPoint(this Coordinates2 coords) {
+            return new Point((int)Math.Round(coords.X), (int)Math.Round(coords.Y));
+        }
     }
 
     public enum CoordsUnit
