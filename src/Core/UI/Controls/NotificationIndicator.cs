@@ -6,9 +6,9 @@ using Microsoft.Xna.Framework.Graphics;
 using Color = Microsoft.Xna.Framework.Color;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 namespace Nekres.Regions_Of_Tyria.UI.Controls {
-    internal sealed class ControlPositionIndicator : Container
+    internal sealed class NotificationIndicator : Container
     {
-        public ControlPositionIndicator()
+        public NotificationIndicator()
         {
             Size                                      =  new Point(GameService.Graphics.SpriteScreen.Width, GameService.Graphics.SpriteScreen.Height);
             Location                                  =  new Point((GameService.Graphics.SpriteScreen.Width - 500) / 2, 0);
@@ -30,11 +30,11 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
         }
 
         public override void PaintBeforeChildren(SpriteBatch spriteBatch, Rectangle bounds) {
-            if (RegionsOfTyriaModule.ModuleInstance == null) {
+            if (RegionsOfTyria.Instance == null) {
                 return;
             }
 
-            var height = (int)(RegionsOfTyriaModule.ModuleInstance.VerticalPositionSetting.Value / 100 * bounds.Height);
+            var height = (int)(RegionsOfTyria.Instance.VerticalPositionSetting.Value / 100 * bounds.Height);
             var rect   = new Rectangle(0, height + 12 * 2, 500, 100);
 
             spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, Color.White * 0.4f);
