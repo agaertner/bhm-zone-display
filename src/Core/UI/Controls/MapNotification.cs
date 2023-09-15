@@ -1,105 +1,129 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Blish_HUD;
+﻿using Blish_HUD;
 using Blish_HUD.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Color = Microsoft.Xna.Framework.Color;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
-namespace Nekres.Regions_Of_Tyria.UI.Controls
-{
+namespace Nekres.Regions_Of_Tyria.UI.Controls {
     internal sealed class MapNotification : Container
     {
-        private static readonly BitmapFont SmallFont;
-        private static readonly BitmapFont MediumFont;
-        private const int TopMargin = 20;
-        private const int StrokeDist = 1;
-        private const int UnderlineSize = 1;
-        private static readonly Color BrightGold;
+        public enum RevealEffect {
+            Decode,
+            Dissolve
+        }
 
-        private const int NotificationCooldownMs = 2000;
+        private const           int   TOP_MARGIN     = 20;
+        private const           int   STROKE_DIST    = 1;
+        private const           int   UNDERLINE_SIZE = 1;
+        private static readonly Color _brightGold;
+        private static readonly Color _darkGold;
+
+        private const int NOTIFICATION_COOLDOWN_MS = 2000;
         private static DateTime _lastNotificationTime;
         
-        private static readonly SynchronizedCollection<MapNotification> ActiveMapNotifications;
+        private static readonly SynchronizedCollection<MapNotification> _activeMapNotifications;
+
+        private static readonly BitmapFont _krytanFont;
+        private static readonly BitmapFont _krytanFontSmall;
+        private static readonly BitmapFont _titlingFont;
+        private static readonly BitmapFont _titlingFontSmall;
+
+        private static SpriteBatchParameters _defaultParams;
 
         static MapNotification()
         {
-            _lastNotificationTime = DateTime.Now;
-            ActiveMapNotifications = new SynchronizedCollection<MapNotification>();
+            _lastNotificationTime = DateTime.UtcNow;
+            _activeMapNotifications = new SynchronizedCollection<MapNotification>();
 
-            SmallFont = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular);
-            MediumFont = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size36, ContentService.FontStyle.Regular);
-            BrightGold = new Color(223, 194, 149, 255);
+            _krytanFont = RegionsOfTyria.Instance.ContentsManager.GetBitmapFont("fonts/NewKrytan.ttf", 46);
+            _krytanFontSmall = RegionsOfTyria.Instance.ContentsManager.GetBitmapFont("fonts/NewKrytan.ttf", 34, 30);
+
+            _titlingFont = RegionsOfTyria.Instance.ContentsManager.GetBitmapFont("fonts/StoweTitling.ttf", 36);
+            _titlingFontSmall = RegionsOfTyria.Instance.ContentsManager.GetBitmapFont("fonts/StoweTitling.ttf", 24);
+
+            _defaultParams = new SpriteBatchParameters();
+
+            _brightGold = new Color(223, 194, 149, 255);
+            _darkGold = new Color(168, 150,  135, 255);
         }
 
-        #region Public Fields
+        public static void ShowNotification(string header, string footer, Texture2D icon = null, float showDuration = 4, float fadeInDuration = 2, float fadeOutDuration = 2, float effectDuration = 0.85f) {
+            if (DateTime.UtcNow.Subtract(_lastNotificationTime).TotalMilliseconds < NOTIFICATION_COOLDOWN_MS) {
+                return;
+            }
+
+            _lastNotificationTime = DateTime.UtcNow;
+
+            var nNot = new MapNotification(header, footer, showDuration, fadeInDuration, fadeOutDuration, effectDuration) {
+                Parent = Graphics.SpriteScreen
+            };
+
+            nNot.ZIndex = _activeMapNotifications.DefaultIfEmpty(nNot).Max(n => n.ZIndex) + 1;
+
+            foreach (var activeScreenNotification in _activeMapNotifications) {
+                activeScreenNotification.SlideDown((int)(_titlingFontSmall.LineHeight + _titlingFont.LineHeight + TOP_MARGIN * 1.05f));
+            }
+
+            _activeMapNotifications.Add(nNot);
+
+            nNot.Show();
+        }
 
         private IEnumerable<string> _headerLines;
-        private string _header;
-        public string Header
-        {
-            get => _header;
-            set
-            {
-                _headerLines = value?.Split(new[]{"<br>"}, StringSplitOptions.RemoveEmptyEntries).ForEach(x => x.Trim());
-                SetProperty(ref _header, value);
-            }
-        }
-
+        private string              _header;
         private IEnumerable<string> _textLines;
-        private string _text;
-        public string Text
-        {
-            get => _text;
-            set
-            {
-                _textLines = value?.Split(new[]{"<br>"}, StringSplitOptions.RemoveEmptyEntries).ForEach(x => x.Trim());
-                SetProperty(ref _text, value);
-            }
-        }
-
-        private float _showDuration;
-        public float ShowDuration {
-            get => _showDuration;
-            set => SetProperty(ref _showDuration, value);
-        }
-
-
-        private float _fadeInDuration;
-        public float FadeInDuration {
-            get => _fadeInDuration;
-            set => SetProperty(ref _fadeInDuration, value);
-        }
-
-        private float _fadeOutDuration;
-        public float FadeOutDuration {
-            get => _fadeOutDuration;
-            set => SetProperty(ref _fadeOutDuration, value);
-        }
-
-        #endregion
+        private string              _text;
+        private float               _showDuration;
+        private float               _fadeInDuration;
+        private float               _fadeOutDuration;
+        private float               _effectDuration;
 
         // ReSharper disable once NotAccessedField.Local
         #pragma warning disable IDE0052 // Remove unread private members
         private Glide.Tween _animFadeLifecycle;
         private int _targetTop;
 
-        private MapNotification(string header, string text, float showDuration = 4, float fadeInDuration = 2, float fadeOutDuration = 2) {
-            _showDuration = showDuration;
-            _fadeInDuration = fadeInDuration;
-            _fadeOutDuration = fadeOutDuration;
+        private SpriteBatchParameters _dissolve;
+        private SpriteBatchParameters _reveal;
 
-            Text = text;
-            Header = header;
-            ClipsBounds = true;
-            Opacity = 0f;
-            Size = new Point(GameService.Graphics.SpriteScreen.Width, GameService.Graphics.SpriteScreen.Height);
-            ZIndex = Screen.MENUUI_BASEINDEX;
-            Location = new Point(0, 0);
+        private float _amount = 0.0f;
+
+        private MapNotification(string header, string text, float showDuration = 4, float fadeInDuration = 2, float fadeOutDuration = 2, float effectDuration = 0.85f) {
+            _showDuration    = showDuration;
+            _fadeInDuration  = fadeInDuration;
+            _fadeOutDuration = fadeOutDuration;
+            _effectDuration  = effectDuration;
+            _text            = text;
+            _textLines       = text?.Split(new[] { "<br>" }, StringSplitOptions.RemoveEmptyEntries).ForEach(x => x.Trim());
+            _header          = header;
+            _headerLines     = header?.Split(new[] { "<br>" }, StringSplitOptions.RemoveEmptyEntries).ForEach(x => x.Trim());
+            ClipsBounds      = true;
+            Opacity          = 0f;
+            Size             = new Point(GameService.Graphics.SpriteScreen.Width, GameService.Graphics.SpriteScreen.Height);
+            ZIndex           = Screen.MENUUI_BASEINDEX;
+            Location         = new Point(0, 0);
 
             _targetTop = Top;
+
+            _dissolve = new SpriteBatchParameters {
+                Effect = RegionsOfTyria.Instance.ContentsManager.GetEffect("effects/dissolve.mgfx")
+            };
+            _reveal = new SpriteBatchParameters {
+                Effect = RegionsOfTyria.Instance.ContentsManager.GetEffect("effects/dissolve.mgfx")
+            };
+
+            var burnColor = new Vector4(0.5f, 0.25f, 0.0f, 0.5f);
+            _dissolve.Effect.Parameters["Amount"].SetValue(0.0f);
+            _dissolve.Effect.Parameters["GlowColor"].SetValue(burnColor);
+            _dissolve.Effect.Parameters["Slide"].SetValue(true);
+            _reveal.Effect.Parameters["Amount"].SetValue(1.0f);
+            _reveal.Effect.Parameters["GlowColor"].SetValue(burnColor);
+            _reveal.Effect.Parameters["Slide"].SetValue(true);
+            //_reveal.Effect.Parameters["Glow"].SetValue(false);
 
             GameService.Graphics.SpriteScreen.Resized += UpdateLocation;
         }
@@ -117,41 +141,63 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls
         }
 
         public override void PaintBeforeChildren(SpriteBatch spriteBatch, Rectangle bounds) {
-            if (RegionsOfTyriaModule.ModuleInstance == null) {
+            if (RegionsOfTyria.Instance == null) {
                 return;
             }
 
-            var height = (int)(RegionsOfTyriaModule.ModuleInstance.VerticalPositionSetting.Value / 100 * bounds.Height);
+            var slide = RegionsOfTyria.Instance.RevealEffectSetting.Value == RevealEffect.Decode;
+            _dissolve.Effect.Parameters["Slide"].SetValue(slide);
+            _reveal.Effect.Parameters["Slide"].SetValue(slide);
+            
+            _dissolve.Effect.Parameters["Opacity"].SetValue(this.Opacity);
+            _reveal.Effect.Parameters["Opacity"].SetValue(this.Opacity);
+
+            _dissolve.Effect.Parameters["Amount"].SetValue(_amount);
+            _reveal.Effect.Parameters["Amount"].SetValue(1.0f - _amount);
+
+            spriteBatch.End();
+
+            if (RegionsOfTyria.Instance.TranslateSetting.Value) {
+                spriteBatch.Begin(_dissolve);
+                PaintText(spriteBatch, bounds, _krytanFont, _krytanFontSmall, false);
+                spriteBatch.End();
+            }
+            
+            spriteBatch.Begin(_reveal);
+            PaintText(spriteBatch, bounds, _titlingFont, _titlingFontSmall, false);
+            spriteBatch.End();
+            spriteBatch.Begin(_defaultParams);
+        }
+
+        private void PaintText(SpriteBatch spriteBatch, Rectangle bounds, BitmapFont font, BitmapFont smallFont, bool underline) {
+            var       height = (int)(RegionsOfTyria.Instance.VerticalPositionSetting.Value / 100 * bounds.Height);
             Rectangle rect;
 
-            if (!string.IsNullOrEmpty(this.Header) && !this.Header.Equals(this.Text, StringComparison.InvariantCultureIgnoreCase))
-            {
-                foreach (var headerLine in _headerLines)
-                {
-                    var size = SmallFont.MeasureString(headerLine);
-                    var lineWidth = (int)size.Width;
+            if (!string.IsNullOrEmpty(_header) && !_header.Equals(_text, StringComparison.InvariantCultureIgnoreCase)) {
+                foreach (var headerLine in _headerLines) {
+                    var size       = smallFont.MeasureString(headerLine);
+                    var lineWidth  = (int)size.Width;
                     var lineHeight = (int)size.Height;
-                    rect = new Rectangle(0, TopMargin + height, bounds.Width, bounds.Height);
-                    height += SmallFont.LetterSpacing + lineHeight;
-                    spriteBatch.DrawStringOnCtrl(this, headerLine, SmallFont, rect, BrightGold, false, true, StrokeDist, HorizontalAlignment.Center, VerticalAlignment.Top);
+                    rect   =  new Rectangle(0, TOP_MARGIN + height, bounds.Width, bounds.Height);
+                    height += smallFont.LineHeight;
+                    spriteBatch.DrawStringOnCtrl(this, headerLine, smallFont, rect, _darkGold, false, true, STROKE_DIST, HorizontalAlignment.Center, VerticalAlignment.Top);
 
-                    // Underline
-                    rect = new Rectangle((bounds.Width - (lineWidth + 2)) / 2, rect.Y + lineHeight + 2, lineWidth + 2, UnderlineSize + 2);
-                    spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, Color.Black * 0.8f);
-                    rect = new Rectangle(rect.X + 1, rect.Y + 1, lineWidth, UnderlineSize);
-                    spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, BrightGold);
+                    if (underline) {
+                        rect = new Rectangle((bounds.Width - (lineWidth + 2)) / 2, rect.Y + lineHeight + 5, lineWidth + 2, UNDERLINE_SIZE + 2);
+                        spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, Color.Black * 0.8f);
+                        rect = new Rectangle(rect.X + 1, rect.Y + 1, lineWidth, UNDERLINE_SIZE);
+                        spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, rect, _darkGold);
+                    }
                 }
 
-                height += TopMargin;
+                height += TOP_MARGIN;
             }
 
-            if (!string.IsNullOrEmpty(this.Text)) 
-            {
-                foreach (var textLine in _textLines)
-                {
-                    rect = new Rectangle(0, TopMargin + height, bounds.Width, bounds.Height);
-                    height += MediumFont.LetterSpacing + (int)MediumFont.MeasureString(textLine).Height;
-                    spriteBatch.DrawStringOnCtrl(this, textLine, MediumFont, rect, BrightGold, false, true, StrokeDist, HorizontalAlignment.Center, VerticalAlignment.Top);
+            if (!string.IsNullOrEmpty(_text)) {
+                foreach (var textLine in _textLines) {
+                    rect   =  new Rectangle(0, TOP_MARGIN + height, bounds.Width, bounds.Height);
+                    height += font.LineHeight;
+                    spriteBatch.DrawStringOnCtrl(this, textLine, font, rect, _brightGold, false, true, STROKE_DIST, HorizontalAlignment.Center, VerticalAlignment.Top);
                 }
             }
         }
@@ -160,55 +206,43 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls
         public override void Show() {
             //Nesting instead so we are able to set a different duration per fade direction.
             _animFadeLifecycle = Animation.Tweener
-                .Tween(this, new { Opacity = 1f }, FadeInDuration)
-                    .OnComplete(() => { _animFadeLifecycle = Animation.Tweener.Tween(this, new { Opacity = 1f }, ShowDuration)
-                        .OnComplete(() => { _animFadeLifecycle = Animation.Tweener.Tween(this, new { Opacity = 0f }, FadeOutDuration)
-                            .OnComplete(Dispose);
-                        });
-                });
-             
+                .Tween(this, new { Opacity = 1f }, _fadeInDuration)
+                   .OnComplete(() => {
+                       _animFadeLifecycle = Animation.Tweener.Tween(this, new { _amount = 1f }, _effectDuration)
+                       .OnComplete(() => {
+                           _animFadeLifecycle = Animation.Tweener.Tween(this, new { Opacity = 1f }, _showDuration)
+                           .OnComplete(() => { 
+                               _animFadeLifecycle = Animation.Tweener.Tween(this, new { Opacity = 0f }, _fadeOutDuration)
+                               .OnComplete(Dispose);
+                           });
+                       });
+                   });
             base.Show();
         }
 
         private void SlideDown(int distance) {
             _targetTop += distance;
 
-            Animation.Tweener.Tween(this, new {Top = _targetTop}, FadeOutDuration);
+            Animation.Tweener.Tween(this, new {Top = _targetTop}, _fadeOutDuration);
 
-            if (_opacity < 1f) return;
+            if (_opacity < 1f) {
+                return;
+            }
 
             _animFadeLifecycle = Animation.Tweener
-                                          .Tween(this, new {Opacity = 0f}, FadeOutDuration)
+                                          .Tween(this, new { Opacity = 0f }, _fadeOutDuration)
                                           .OnComplete(Dispose);
         }
 
         /// <inheritdoc />
         protected override void DisposeControl() {
-            ActiveMapNotifications.Remove(this);
+            _reveal.Effect?.Dispose();
+            _dissolve.Effect?.Dispose();
+
+            _activeMapNotifications.Remove(this);
             GameService.Graphics.SpriteScreen.Resized -= UpdateLocation;
 
             base.DisposeControl();
-        }
-
-        public static void ShowNotification(string header, string footer, Texture2D icon = null, float showDuration = 4, float fadeInDuration = 2, float fadeOutDuration = 2) {
-            if (DateTime.Now.Subtract(_lastNotificationTime).TotalMilliseconds < NotificationCooldownMs)
-                return;
-
-            _lastNotificationTime = DateTime.Now;
-
-            var nNot = new MapNotification(header, footer, showDuration, fadeInDuration, fadeOutDuration) {
-                Parent = Graphics.SpriteScreen
-            };
-
-            nNot.ZIndex = ActiveMapNotifications.DefaultIfEmpty(nNot).Max(n => n.ZIndex) + 1;
-
-            foreach (var activeScreenNotification in ActiveMapNotifications) {
-                activeScreenNotification.SlideDown((int)(SmallFont.LineHeight + MediumFont.LineHeight + TopMargin * 1.05f));
-            }
-
-            ActiveMapNotifications.Add(nNot);
-
-            nNot.Show();
         }
     }
 }
