@@ -18,7 +18,7 @@ namespace Nekres.Regions_Of_Tyria {
                 throw new ArgumentException("Font size must be greater than 0.", nameof(fontSize));
             }
 
-            var fontStream = manager.GetFileStream(fontPath);
+            using var fontStream = manager.GetFileStream(fontPath);
             var fontData = new byte[fontStream.Length];
             var fontDataLength = fontStream.Read(fontData, 0, fontData.Length);
 
