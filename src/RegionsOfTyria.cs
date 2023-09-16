@@ -139,24 +139,33 @@ namespace Nekres.Regions_Of_Tyria {
                 _notificationIndicator = null;
             }
 
+            // Pause when Gw2Mumble is inactive or the player is not in-game
             if (!GameService.Gw2Mumble.IsAvailable || !GameService.GameIntegration.Gw2Instance.IsInGame) {
                 return;
             }
 
+            // Pause when sector notifications are disabled
             if (!_toggleSectorNotification.Value) {
                 return;
             }
 
+            // Pause when the player is moving too fast between zones to avoid spam
             if (playerSpeed > 55) {
                 return;
             }
 
+            // Pause when the player is in combat
             if (_hideInCombat.Value && GameService.Gw2Mumble.PlayerCharacter.IsInCombat) {
                 return;
             }
 
-            if (gameTime.TotalGameTime.TotalMilliseconds - _lastRun     < 10   || 
-                DateTime.UtcNow.Subtract(_lastUpdate).TotalSeconds < 20) {
+            // Rate limit update
+            if (gameTime.TotalGameTime.TotalMilliseconds - _lastRun < 10) {
+                return;
+            }
+
+            // Cooldown to avoid spam
+            if (DateTime.UtcNow.Subtract(_lastUpdate).TotalSeconds < 5) {
                 return;
             }
 
@@ -269,7 +278,7 @@ namespace Nekres.Regions_Of_Tyria {
             var playerLocation = GameService.Gw2Mumble.RawClient.AvatarPosition.ToContinentCoords(CoordsUnit.MUMBLE, currentMap.MapRect, currentMap.ContinentRect).SwapYz().ToPlane();
             var sectors = await _sectorRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
 
-            var sector = sectors?.FirstOrDefault(sector => PolygonUtil.IsPointInsidePolygon(playerLocation.ToPoint(), sector.Bounds));
+            var sector = sectors?.FirstOrDefault(sector => sector.Contains(playerLocation.X, playerLocation.Y));
 
             if (sector == null || _prevSectorId == sector.Id) {
                 return null;
