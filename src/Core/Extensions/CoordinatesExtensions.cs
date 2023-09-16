@@ -41,6 +41,10 @@ namespace Nekres.Regions_Of_Tyria {
         public static Point ToPoint(this Coordinates2 coords) {
             return new Point((int)Math.Round(coords.X), (int)Math.Round(coords.Y));
         }
+
+        public static Vector2 ToVector2(this Coordinates2 coords) {
+            return new Vector2((float)coords.X, (float)coords.Y);
+        }
     }
 
     public enum CoordsUnit
