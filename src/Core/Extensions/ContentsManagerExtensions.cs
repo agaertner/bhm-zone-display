@@ -1,9 +1,9 @@
 ﻿using Blish_HUD;
+using Blish_HUD.Modules.Managers;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
-using System;
-using Blish_HUD.Modules.Managers;
 using SpriteFontPlus;
+using System;
 namespace Nekres.Regions_Of_Tyria {
     internal static class ContentsManagerExtensions {
 
@@ -13,7 +13,8 @@ namespace Nekres.Regions_Of_Tyria {
         /// <param name="manager">Module's <see cref="ContentsManager"/>.</param>
         /// <param name="fontPath">The path to the TTF font file.</param>
         /// <param name="fontSize">Size of the font.</param>
-        public static SpriteFont GetSpriteFont(this ContentsManager manager, string fontPath, int fontSize) {
+        /// <param name="textureSize">Size of the <see cref="SpriteFont.Texture"/>.<br/>A greater <c>fontSize</c> results in bigger glyphs which may require more texture space.</param>
+        public static SpriteFont GetSpriteFont(this ContentsManager manager, string fontPath, int fontSize, int textureSize = 1392) {
             if (fontSize <= 0) {
                 throw new ArgumentException("Font size must be greater than 0.", nameof(fontSize));
             }
@@ -24,7 +25,7 @@ namespace Nekres.Regions_Of_Tyria {
 
             if (fontDataLength > 0) {
                 using var ctx = GameService.Graphics.LendGraphicsDeviceContext();
-                var bakeResult = TtfFontBaker.Bake(fontData, fontSize, 1024, 1024, new[] {
+                var bakeResult = TtfFontBaker.Bake(fontData, fontSize, textureSize, textureSize, new[] {
                     CharacterRange.BasicLatin,
                     CharacterRange.Latin1Supplement,
                     CharacterRange.LatinExtendedA
