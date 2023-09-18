@@ -74,6 +74,7 @@
     <Compile Include="Core\Extensions\ContentsManagerExtensions.cs" />
     <Compile Include="Core\Extensions\PlayerCharacterExtensions.cs" />
     <Compile Include="Core\Extensions\SpriteFontExtensions.cs" />
+    <Compile Include="Core\Utils\BitmapFont.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Core\UI\Controls\NotificationIndicator.cs" />
     <Compile Include="Core\UI\Controls\MapNotification.cs" />

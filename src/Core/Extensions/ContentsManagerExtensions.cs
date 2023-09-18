@@ -1,4 +1,4 @@
-﻿using Blish_HUD;
+using Blish_HUD;
 using Blish_HUD.Modules.Managers;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
@@ -44,9 +44,6 @@ namespace Nekres.Regions_Of_Tyria {
         /// <param name="fontSize">Size of the font.</param>
         /// <param name="lineHeight">Sets the line height. By default, <see cref="SpriteFont.LineSpacing"/> will be used.</param>
         public static BitmapFont GetBitmapFont(this ContentsManager manager, string fontPath, int fontSize, int lineHeight = 0) {
-            if (lineHeight < 0) {
-                throw new ArgumentException("Line height cannot be negative.", nameof(lineHeight));
-            }
             return manager.GetSpriteFont(fontPath, fontSize)?.ToBitmapFont(lineHeight);
         }
     }
