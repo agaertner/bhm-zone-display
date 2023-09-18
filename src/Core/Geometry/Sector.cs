@@ -34,7 +34,7 @@ namespace Nekres.Regions_Of_Tyria.Geometry {
 
             for (int i = 0, j = polygon.Count - 1; i < polygon.Count; j = i++) {
                 if ((polygon[i].Y > y) != (polygon[j].Y > y) &&
-                    x                  < (polygon[j].X - polygon[i].X) * (y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) + polygon[i].X) {
+                    x < (polygon[j].X - polygon[i].X) * (y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) + polygon[i].X) {
                     isInside = !isInside;
                 }
             }
