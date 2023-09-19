@@ -45,6 +45,8 @@ namespace Nekres.Regions_Of_Tyria {
 
         internal SettingEntry<bool>  Translate;
         internal SettingEntry<bool>  Dissolve;
+        internal SettingEntry<bool>  UnderlineHeader;
+        internal SettingEntry<bool>  OverlapHeader;
         internal SettingEntry<bool>  MuteReveal;
         internal SettingEntry<bool>  MuteVanish;
         internal SettingEntry<float> VerticalPosition;
@@ -88,6 +90,14 @@ namespace Nekres.Regions_Of_Tyria {
             Dissolve = generalCol.DefineSetting("dissolve", true, 
                                                 () => "Dissolve when Fading Out", 
                                                 () => "Makes zone notifications burn up when they fade out.");
+
+            UnderlineHeader = generalCol.DefineSetting("underline_heading", true, 
+                                                       () => "Underline Heading", 
+                                                       () => "Underlines the top text if a notification has one.");
+
+            OverlapHeader = generalCol.DefineSetting("overlap_heading", false, 
+                                                      () => "Overlap Heading", 
+                                                      () => "Makes the bottom text stylishly overlap the top text.");
 
             MuteReveal = generalCol.DefineSetting("mute_reveal", false, 
                                                   () => "Mute Reveal Sound", 
@@ -137,6 +147,8 @@ namespace Nekres.Regions_Of_Tyria {
                                                                           () => "Include Region",
                                                                           () => "Shows the region's name above the map's name.");
 
+            
+
             var sectorCol = settings.AddSubCollection("sector_alert", true, () => "Sector Notification");
 
             _toggleSectorNotification = sectorCol.DefineSetting("enabled", true,
@@ -179,7 +191,7 @@ namespace Nekres.Regions_Of_Tyria {
             }
 
             // Pause when the player is moving too fast between zones to avoid spam
-            if (playerSpeed > 50) {
+            if (playerSpeed > 54) {
                 return;
             }
 
@@ -230,8 +242,12 @@ namespace Nekres.Regions_Of_Tyria {
             VerticalPosition.SettingChanged += OnVerticalPositionChanged;
             FontSize.SettingChanged         += OnFontSizeChanged;
 
-            Dissolve.SettingChanged  += PopNotification;
-            Translate.SettingChanged += PopNotification;
+            Dissolve.SettingChanged        += PopNotification;
+            Translate.SettingChanged       += PopNotification;
+            UnderlineHeader.SettingChanged += PopNotification;
+            OverlapHeader.SettingChanged  += PopNotification;
+            MuteReveal.SettingChanged      += PopNotification;
+            MuteVanish.SettingChanged      += PopNotification;
 
             // Base handler must be called
             base.OnModuleLoaded(e);
@@ -248,14 +264,16 @@ namespace Nekres.Regions_Of_Tyria {
             KrytanFontSmall?.Dispose();
             TitlingFont?.Dispose();
             TitlingFontSmall?.Dispose();
-
-            _notificationIndicator?.Dispose();
-
             VerticalPosition.SettingChanged -= OnVerticalPositionChanged;
             FontSize.SettingChanged         -= OnFontSizeChanged;
-
             Dissolve.SettingChanged         -= PopNotification;
             Translate.SettingChanged        -= PopNotification;
+            UnderlineHeader.SettingChanged  -= PopNotification;
+            OverlapHeader.SettingChanged   -= PopNotification;
+            MuteReveal.SettingChanged       -= PopNotification;
+            MuteVanish.SettingChanged       -= PopNotification;
+
+            _notificationIndicator?.Dispose();
 
             GameService.Gw2Mumble.CurrentMap.MapChanged -= OnMapChanged;
             GameService.Overlay.UserLocaleChanged       -= OnUserLocaleChanged;
@@ -301,7 +319,7 @@ namespace Nekres.Regions_Of_Tyria {
             KrytanFont?.Dispose();
             KrytanFontSmall?.Dispose();
             KrytanFont      = ContentsManager.GetBitmapFont("fonts/NewKrytan.ttf", size + 10);
-            KrytanFontSmall = ContentsManager.GetBitmapFont("fonts/NewKrytan.ttf", size - 2, 25);
+            KrytanFontSmall = ContentsManager.GetBitmapFont("fonts/NewKrytan.ttf", size - 2);
 
             TitlingFont?.Dispose();
             TitlingFontSmall?.Dispose();

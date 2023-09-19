@@ -65,7 +65,7 @@ namespace Nekres.Regions_Of_Tyria {
             return input;
         }
 
-        public static IEnumerable<string> SplitClean(this string input, string delimiter = "<br>") {
+        public static IEnumerable<string> Split(this string input, string delimiter) {
             return input.Split(new[] { delimiter }, StringSplitOptions.RemoveEmptyEntries).ForEach(x => x.Trim());
         }
 
@@ -79,7 +79,7 @@ namespace Nekres.Regions_Of_Tyria {
             return count;
         }
 
-        public static string Wrap(this string input, string delimiter = "<br>") {
+        public static string Wrap(this string input, string delimiter) {
             return input.Replace(delimiter, "\n");
         }
     }
