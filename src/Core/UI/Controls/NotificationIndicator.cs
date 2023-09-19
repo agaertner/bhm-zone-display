@@ -37,7 +37,9 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
                 return;
             }
 
-            MapNotification.PaintText(this, spriteBatch, bounds, RegionsOfTyria.Instance.TitlingFont, RegionsOfTyria.Instance.TitlingFontSmall, _header, _text);
+            MapNotification.PaintText(this, spriteBatch, bounds, 
+                                      RegionsOfTyria.Instance.TitlingFont, RegionsOfTyria.Instance.TitlingFontSmall, _header, _text, 
+                                      RegionsOfTyria.Instance.OverlapHeader.Value, RegionsOfTyria.Instance.UnderlineHeader.Value);
         }
 
         /// <inheritdoc />

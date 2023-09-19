@@ -112,7 +112,7 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
 
             if (!RegionsOfTyria.Instance.MuteVanish.Value) {
                 _vanishSound        = RegionsOfTyria.Instance.VanishSound.CreateInstance();
-                _vanishSound.Volume = 0.5f * GameService.GameIntegration.Audio.Volume;
+                _vanishSound.Volume = 0.7f * GameService.GameIntegration.Audio.Volume;
             }
 
             //var burnColor = new Vector4(0.4f, 0.23f, 0.0f, 0.8f);
@@ -159,18 +159,23 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
             } else if (RegionsOfTyria.Instance.Translate.Value) {
 
                 spriteBatch.Begin(_decode);
-                PaintText(this, spriteBatch, bounds, RegionsOfTyria.Instance.KrytanFont, RegionsOfTyria.Instance.KrytanFontSmall, _header, _text, false);
+                PaintText(this, spriteBatch, bounds, 
+                          RegionsOfTyria.Instance.KrytanFont, RegionsOfTyria.Instance.KrytanFontSmall, _header, _text, 
+                          RegionsOfTyria.Instance.OverlapHeader.Value, false);
                 spriteBatch.End();
 
             }
 
             spriteBatch.Begin(_reveal);
-            PaintText(this, spriteBatch, bounds, RegionsOfTyria.Instance.TitlingFont, RegionsOfTyria.Instance.TitlingFontSmall, _header, _text, true, _amount);
+            PaintText(this, spriteBatch, bounds, 
+                      RegionsOfTyria.Instance.TitlingFont, RegionsOfTyria.Instance.TitlingFontSmall, _header, _text, 
+                      RegionsOfTyria.Instance.OverlapHeader.Value, 
+                      RegionsOfTyria.Instance.UnderlineHeader.Value, _amount);
             spriteBatch.End();
             spriteBatch.Begin(_defaultParams);
         }
 
-        internal static void PaintText(Control ctrl, SpriteBatch spriteBatch, Rectangle bounds, BitmapFont font, BitmapFont smallFont, string header, string text, bool underline = true, float deltaAmount = 1) {
+        internal static void PaintText(Control ctrl, SpriteBatch spriteBatch, Rectangle bounds, BitmapFont font, BitmapFont smallFont, string header, string text, bool overlap = false, bool underline = true, float deltaAmount = 1) {
             var       height = (int)Math.Round(RegionsOfTyria.Instance.VerticalPosition.Value / 100f * bounds.Height);
             Rectangle rect;
 
@@ -204,16 +209,16 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
                 }
 
                 rect = new Rectangle(0, height, bounds.Width, bounds.Height);
-                spriteBatch.DrawStringOnCtrl(ctrl, header.Wrap(), smallFont, rect, _darkGold, false, true, STROKE_DIST, HorizontalAlignment.Center, VerticalAlignment.Top);
+                spriteBatch.DrawStringOnCtrl(ctrl, header.Wrap(BREAKRULE), smallFont, rect, _darkGold, false, true, STROKE_DIST, HorizontalAlignment.Center, VerticalAlignment.Top);
                 
-                height = bottom - smallFont.LineHeight;
+                height = bottom - smallFont.LineHeight * (overlap ? 2 : 1);
             }
 
             if (!string.IsNullOrEmpty(text)) {
                 rect = new Rectangle(0, height, bounds.Width, bounds.Height);
 
                 // Draw lines separately to fix the overlapping line height of the titling font.
-                foreach (string line in text.SplitClean()) {
+                foreach (string line in text.Split(BREAKRULE)) {
                     rect.Y += (int)Math.Round(font.MeasureString(line).Height * 2.5f);
                     spriteBatch.DrawStringOnCtrl(ctrl, line, font, rect, _brightGold, false, true, STROKE_DIST, HorizontalAlignment.Center, VerticalAlignment.Top);
                 }
