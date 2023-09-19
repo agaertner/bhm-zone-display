@@ -1,6 +1,7 @@
 ﻿using Blish_HUD;
 using Blish_HUD.Controls;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -8,11 +9,11 @@ using System.Linq;
 using Color = Microsoft.Xna.Framework.Color;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 namespace Nekres.Regions_Of_Tyria.UI.Controls {
-    internal sealed class MapNotification : Container
-    {
-        private const int TOP_MARGIN     = 20;
-        private const int STROKE_DIST    = 1;
-        private const int UNDERLINE_SIZE = 2;
+    internal sealed class MapNotification : Container {
+
+        private const string BREAKRULE      = "<br>";
+        private const int    STROKE_DIST    = 1;
+        private const int    UNDERLINE_SIZE = 2;
 
         private static readonly Color _brightGold;
         private static readonly Color _darkGold;
@@ -42,6 +43,10 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
 
             _lastNotificationTime = DateTime.UtcNow;
 
+            if (string.IsNullOrEmpty(header) && string.IsNullOrEmpty(footer)) {
+                return; // No text to show.
+            }
+
             var nNot = new MapNotification(header, footer, showDuration, fadeInDuration, fadeOutDuration, effectDuration) {
                 Parent = Graphics.SpriteScreen
             };
@@ -67,6 +72,9 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
         private SpriteBatchParameters _decode;
         private SpriteBatchParameters _reveal;
 
+        private SoundEffectInstance _decodeSound;
+        private SoundEffectInstance _vanishSound;
+
         private int   _targetTop;
         private float _amount = 0.0f;
         private bool  _isFading;
@@ -91,6 +99,17 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
             _reveal = new SpriteBatchParameters {
                 Effect = RegionsOfTyria.Instance.DissolveEffect.Clone()
             };
+
+            if (!RegionsOfTyria.Instance.MuteReveal.Value) {
+                _decodeSound        = RegionsOfTyria.Instance.DecodeSound.CreateInstance();
+                _decodeSound.Volume = GameService.GameIntegration.Audio.Volume;
+
+            }
+
+            if (!RegionsOfTyria.Instance.MuteVanish.Value) {
+                _vanishSound        = RegionsOfTyria.Instance.VanishSound.CreateInstance();
+                _vanishSound.Volume = 0.5f * GameService.GameIntegration.Audio.Volume;
+            }
 
             //var burnColor = new Vector4(0.4f, 0.23f, 0.0f, 0.8f);
             _decode.Effect.Parameters["Amount"].SetValue(0.0f);
@@ -153,17 +172,18 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
 
             if (!string.IsNullOrEmpty(header) && !header.Equals(text, StringComparison.InvariantCultureIgnoreCase)) {
 
-                var str  = header.Wrap();
-                var size       = smallFont.MeasureString(str);
-                var lineHeight = (int)size.Height;
+                // Count the header lines to determine the height of the header.
+                var lines  = 1 + header.Count(BREAKRULE);
+                var bottom = height + lines * smallFont.LineHeight;
 
                 if (underline) {
                     // Draw underline before header so that the serifs or terminals of letters are not drawn over.
 
-                    var lineWidth = (int)Math.Round(deltaAmount * size.Width);
+                    var maxWidth  = (int)Math.Round(smallFont.MeasureString(header).Width);
+                    var lineWidth = (int)Math.Round(deltaAmount * maxWidth);
 
                     // underline border
-                    rect = new Rectangle((bounds.Width - lineWidth) / 2, height + lineHeight + 15, (lineWidth + 2) / 2, UNDERLINE_SIZE + 2);
+                    rect = new Rectangle((bounds.Width - lineWidth) / 2, bottom + 15, (lineWidth + 2) / 2, UNDERLINE_SIZE + 2);
                     spriteBatch.DrawOnCtrl(ctrl, ContentService.Textures.Pixel, rect, Color.Black * 0.8f);
 
                     // underline fill
@@ -171,7 +191,7 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
                     spriteBatch.DrawOnCtrl(ctrl, ContentService.Textures.Pixel, rect, _darkGold);
 
                     // underline border
-                    rect = new Rectangle(bounds.Width / 2, height + lineHeight + 15, (lineWidth + 1) / 2, UNDERLINE_SIZE + 2);
+                    rect = new Rectangle(bounds.Width / 2, bottom + 15, (lineWidth + 1) / 2, UNDERLINE_SIZE + 2);
                     spriteBatch.DrawOnCtrl(ctrl, ContentService.Textures.Pixel, rect, Color.Black * 0.8f);
 
                     // underline fill
@@ -180,13 +200,19 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
                 }
 
                 rect = new Rectangle(0, height, bounds.Width, bounds.Height);
-                spriteBatch.DrawStringOnCtrl(ctrl, str, smallFont, rect, _darkGold, false, true, STROKE_DIST, HorizontalAlignment.Center, VerticalAlignment.Top);
-                height += font.LineHeight * 2 + TOP_MARGIN;
+                spriteBatch.DrawStringOnCtrl(ctrl, header.Wrap(), smallFont, rect, _darkGold, false, true, STROKE_DIST, HorizontalAlignment.Center, VerticalAlignment.Top);
+                
+                height = bottom - smallFont.LineHeight;
             }
 
             if (!string.IsNullOrEmpty(text)) {
-                rect   =  new Rectangle(0, height, bounds.Width, bounds.Height);
-                spriteBatch.DrawStringOnCtrl(ctrl, text.Wrap(), font, rect, _brightGold, false, true, STROKE_DIST, HorizontalAlignment.Center, VerticalAlignment.Top);
+                rect = new Rectangle(0, height, bounds.Width, bounds.Height);
+
+                // Draw lines separately to fix the overlapping line height of the titling font.
+                foreach (string line in text.SplitClean()) {
+                    rect.Y += (int)Math.Round(font.MeasureString(line).Height * 2.5f);
+                    spriteBatch.DrawStringOnCtrl(ctrl, line, font, rect, _brightGold, false, true, STROKE_DIST, HorizontalAlignment.Center, VerticalAlignment.Top);
+                }
             }
         }
 
@@ -197,15 +223,21 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
                      .OnComplete(() => {
                          Animation.Tweener.Timer(0.2f)
                          .OnComplete(() => {
+                            _decodeSound?.Play();
                             Animation.Tweener.Tween(this, new {_amount = 1f}, _effectDuration)
                             .OnComplete(() => {
+                                _decodeSound?.Stop();
                                 Animation.Tweener.Tween(this, new {Opacity = 1f}, _showDuration)
                                 .OnComplete(() => {
                                     _isFading = true;
+                                    _vanishSound?.Play();
                                     Animation.Tweener.Tween(this, RegionsOfTyria.Instance.Dissolve.Value ? 
                                                                       new {Opacity = 0.9f, _amount = 0f} : 
                                                                       new {Opacity = 0f}, _fadeOutDuration)
-                                    .OnComplete(Dispose);
+                                    .OnComplete(() => {
+                                        _vanishSound?.Stop();
+                                        Dispose();
+                                    });
                                 });
                             });
                         });
@@ -225,6 +257,8 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
 
         /// <inheritdoc />
         protected override void DisposeControl() {
+            _vanishSound?.Dispose();
+            _decodeSound?.Dispose();
             _reveal.Effect?.Dispose();
             _decode.Effect?.Dispose();
 
