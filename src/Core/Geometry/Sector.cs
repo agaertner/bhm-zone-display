@@ -3,13 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Nekres.Regions_Of_Tyria.Geometry {
-    public class Sector
-    {
+    public class Sector {
+
+        public static Sector Zero = new();
+
         public readonly int Id;
 
         public readonly string Name;
 
         private readonly IReadOnlyList<Point> _bounds;
+
+        private Sector() {
+            Id      = -1;
+            Name    = string.Empty;
+            _bounds = new List<Point>();
+        }
 
         public Sector(ContinentFloorRegionMapSector sector)
         {

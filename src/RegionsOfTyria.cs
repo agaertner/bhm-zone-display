@@ -5,6 +5,7 @@ using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
 using Gw2Sharp.WebApi.V2.Models;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Nekres.Regions_Of_Tyria.Geometry;
 using Nekres.Regions_Of_Tyria.UI.Controls;
@@ -44,22 +45,25 @@ namespace Nekres.Regions_Of_Tyria {
 
         internal SettingEntry<bool>  Translate;
         internal SettingEntry<bool>  Dissolve;
+        internal SettingEntry<bool>  MuteReveal;
+        internal SettingEntry<bool>  MuteVanish;
         internal SettingEntry<float> VerticalPosition;
         internal SettingEntry<float> FontSize;
 
         private AsyncCache<int, Map>          _mapRepository;
         private AsyncCache<int, List<Sector>> _sectorRepository;
 
-        internal Effect DissolveEffect;
-        internal BitmapFont KrytanFont;
-        internal BitmapFont KrytanFontSmall;
-        internal BitmapFont TitlingFont;
-        internal BitmapFont TitlingFontSmall;
+        internal SoundEffect DecodeSound;
+        internal SoundEffect VanishSound;
+        internal Effect      DissolveEffect;
+        internal BitmapFont  KrytanFont;
+        internal BitmapFont  KrytanFontSmall;
+        internal BitmapFont  TitlingFont;
+        internal BitmapFont  TitlingFontSmall;
 
-        private string _currentMap;
-        private string _currentSector;
-        private int    _prevSectorId;
-        private int    _prevMapId;
+        private Map    _currentMap     = new();
+        private Sector _currentSector  = Sector.Zero;
+        private Sector _previousSector = Sector.Zero;
 
         private DateTime              _lastIndicatorChange = DateTime.UtcNow;
         private NotificationIndicator _notificationIndicator;
@@ -84,6 +88,14 @@ namespace Nekres.Regions_Of_Tyria {
             Dissolve = generalCol.DefineSetting("dissolve", true, 
                                                 () => "Dissolve when Fading Out", 
                                                 () => "Makes zone notifications burn up when they fade out.");
+
+            MuteReveal = generalCol.DefineSetting("mute_reveal", false, 
+                                                  () => "Mute Reveal Sound", 
+                                                  () => "Mutes the sound effect which plays during reveal.");
+
+            MuteVanish = generalCol.DefineSetting("mute_vanish", false,
+                                                  () => "Mute Vanish Sound",
+                                                  () => "Mutes the sound effect which plays during fade-out.");
 
             VerticalPosition = generalCol.DefineSetting("pos_y", 25f,
                                                         () => "Vertical Position",
@@ -140,6 +152,12 @@ namespace Nekres.Regions_Of_Tyria {
             _sectorRepository = new AsyncCache<int, List<Sector>>(RequestSectors);
 
             DissolveEffect = ContentsManager.GetEffect("effects/dissolve.mgfx");
+            DecodeSound = ContentsManager.GetSound("sounds/decode.wav");
+            VanishSound = ContentsManager.GetSound("sounds/vanish.wav");
+        }
+
+        protected override async Task LoadAsync() {
+            _currentMap = await _mapRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
         }
 
         protected override async void Update(GameTime gameTime) {
@@ -161,7 +179,7 @@ namespace Nekres.Regions_Of_Tyria {
             }
 
             // Pause when the player is moving too fast between zones to avoid spam
-            if (playerSpeed > 55) {
+            if (playerSpeed > 50) {
                 return;
             }
 
@@ -183,15 +201,24 @@ namespace Nekres.Regions_Of_Tyria {
             _lastRun    = gameTime.ElapsedGameTime.TotalMilliseconds;
             _lastUpdate = DateTime.UtcNow;
 
-            var currentMap    = await _mapRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
-            var currentSector = await GetSector(currentMap);
-
-            if (!_unloading && currentSector != null) {
-                _currentMap = currentMap.Name;
-                _currentSector = currentSector.Name;
-
-                ShowNotification(_includeMapInSectorNotification.Value ? currentMap.Name : null, currentSector.Name);
+            if (_currentMap.Id == 0) {
+                _currentMap = await _mapRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
             }
+
+            var sector = await GetSector(_currentMap);
+
+            if (sector == Sector.Zero) {
+                return;
+            }
+
+            // Module is unloading. Stop.
+            if (_unloading) {
+                return;
+            }
+
+            _currentSector = sector;
+
+            ShowNotification(_includeMapInSectorNotification.Value ? _currentMap.Name : null, sector.Name);
         }
 
         protected override void OnModuleLoaded(EventArgs e) {
@@ -214,6 +241,8 @@ namespace Nekres.Regions_Of_Tyria {
         protected override void Unload() {
             _unloading = true;
 
+            VanishSound?.Dispose();
+            DecodeSound?.Dispose();
             DissolveEffect?.Dispose();
             KrytanFont?.Dispose();
             KrytanFontSmall?.Dispose();
@@ -249,13 +278,13 @@ namespace Nekres.Regions_Of_Tyria {
         private void ShowPreviewSettingIndicator() {
             _lastIndicatorChange = DateTime.UtcNow;
 
-            _notificationIndicator ??= new NotificationIndicator(_currentMap, _currentSector) {
+            _notificationIndicator ??= new NotificationIndicator(_currentMap.Name, _currentSector.Name) {
                 Parent = GameService.Graphics.SpriteScreen
             };
         }
 
         private void PopNotification(object sender, ValueChangedEventArgs<bool> e) {
-            ShowNotification(_includeMapInSectorNotification.Value ? _currentMap : null, _currentSector);
+            ShowNotification(_includeMapInSectorNotification.Value ? _currentMap.Name : null, _currentSector.Name);
         }
 
         private void ShowNotification(string header, string text) {
@@ -272,7 +301,7 @@ namespace Nekres.Regions_Of_Tyria {
             KrytanFont?.Dispose();
             KrytanFontSmall?.Dispose();
             KrytanFont      = ContentsManager.GetBitmapFont("fonts/NewKrytan.ttf", size + 10);
-            KrytanFontSmall = ContentsManager.GetBitmapFont("fonts/NewKrytan.ttf", size - 2, 30);
+            KrytanFontSmall = ContentsManager.GetBitmapFont("fonts/NewKrytan.ttf", size - 2, 25);
 
             TitlingFont?.Dispose();
             TitlingFontSmall?.Dispose();
@@ -283,64 +312,65 @@ namespace Nekres.Regions_Of_Tyria {
         private void OnUserLocaleChanged(object o, ValueEventArgs<System.Globalization.CultureInfo> e) {
             _mapRepository    = new AsyncCache<int, Map>(RequestMap);
             _sectorRepository = new AsyncCache<int, List<Sector>>(RequestSectors);
+            _currentMap       = new Map();
+            _currentSector    = Sector.Zero;
+            _previousSector   = Sector.Zero;
         }
 
         private async void OnMapChanged(object o, ValueEventArgs<int> e) {
+            _lastUpdate = DateTime.UtcNow;
+
+            var map = await _mapRepository.GetItem(e.Value);
+
+            _currentMap = map;
+
             if (!_toggleMapNotification.Value) {
                 return;
             }
 
-            _lastUpdate = DateTime.UtcNow;
-
-            var currentMap = await _mapRepository.GetItem(e.Value);
-
-            if (currentMap == null || currentMap.Id == _prevMapId) {
-                return;
-            }
-
-            _prevMapId = currentMap.Id;
-
-            var header = currentMap.RegionName;
-            var mapName   = currentMap.Name;
+            var header = map.RegionName;
+            var mapName = map.Name;
 
             // Some maps consist of just a single sector and hide their actual name in it.
             if (mapName.Equals(header, StringComparison.InvariantCultureIgnoreCase)) {
-                var currentSector = await GetSector(currentMap);
+                var sector = await GetSector(map);
 
-                if (currentSector != null && !string.IsNullOrEmpty(currentSector.Name)) {
-                    mapName = currentSector.Name;
+                if (sector != Sector.Zero && !string.IsNullOrEmpty(sector.Name)) {
+                    mapName = sector.Name;
                 }
             }
 
             ShowNotification(_includeRegionInMapNotification.Value ? header : null, mapName);
         }
 
-        private async Task<Sector> GetSector(Map currentMap) {
-            if (currentMap == null) {
-                return null;
-            }
-
-            var playerLocation = GameService.Gw2Mumble.RawClient.AvatarPosition.ToContinentCoords(CoordsUnit.MUMBLE, currentMap.MapRect, currentMap.ContinentRect).SwapYz().ToPlane();
+        private async Task<Sector> GetSector(Map map) {
+            var playerLocation = GameService.Gw2Mumble.RawClient.AvatarPosition.ToContinentCoords(CoordsUnit.MUMBLE, map.MapRect, map.ContinentRect).SwapYz().ToPlane();
             var sectors = await _sectorRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
 
             var sector = sectors?.FirstOrDefault(sector => sector.Contains(playerLocation.X, playerLocation.Y));
 
-            if (sector == null || _prevSectorId == sector.Id) {
-                return null;
+            if (sector == null) {
+                return Sector.Zero;
             }
 
-            _currentSector = sector.Name;
-            _prevSectorId = sector.Id;
+            // Still in the same sector. Ignore.
+            if (_currentSector.Id == sector.Id) {
+                return Sector.Zero;
+            }
+
+            // Ignore back and forth between same two sectors.
+            if (_previousSector.Id == sector.Id) {
+                return Sector.Zero;
+            }
+
+            _previousSector = _currentSector; // Move current sector to previous sector.
+            _currentSector  = sector; // Save new sector id as current sector id.
+
             return sector;
         }
 
         private async Task<List<Sector>> RequestSectors(int mapId) {
-
             var map = await _mapRepository.GetItem(mapId);
-
-            if (map == null) {
-                return null;
-            }
 
             var geometryZone = new List<Sector>();
 
@@ -354,7 +384,8 @@ namespace Nekres.Regions_Of_Tyria {
         }
 
         private async Task<Map> RequestMap(int id) {
-            return await TaskUtil.RetryAsync(() => Gw2ApiManager.Gw2ApiClient.V2.Maps.GetAsync(id));
+            var map = await TaskUtil.RetryAsync(() => Gw2ApiManager.Gw2ApiClient.V2.Maps.GetAsync(id));
+            return map ?? new Map();
         }
     }
 }
