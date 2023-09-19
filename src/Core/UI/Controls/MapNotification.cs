@@ -36,30 +36,34 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
             _darkGold = new Color(178, 160,  145, 255);
         }
 
-        public static void ShowNotification(string header, string footer, float showDuration = 4, float fadeInDuration = 2, float fadeOutDuration = 2, float effectDuration = 0.85f) {
+        public static void ShowNotification(string header, string text, float showDuration = 4, float fadeInDuration = 2, float fadeOutDuration = 2, float effectDuration = 0.85f) {
             if (DateTime.UtcNow.Subtract(_lastNotificationTime).TotalMilliseconds < NOTIFICATION_COOLDOWN_MS) {
                 return;
             }
 
             _lastNotificationTime = DateTime.UtcNow;
 
-            if (string.IsNullOrEmpty(header) && string.IsNullOrEmpty(footer)) {
-                return; // No text to show.
+            if (string.IsNullOrEmpty(text)) {
+                return; // Main text is required.
             }
 
-            var nNot = new MapNotification(header, footer, showDuration, fadeInDuration, fadeOutDuration, effectDuration) {
-                Parent = Graphics.SpriteScreen
-            };
+            try {
+                var nNot = new MapNotification(header, text, showDuration, fadeInDuration, fadeOutDuration, effectDuration) {
+                    Parent = Graphics.SpriteScreen
+                };
 
-            nNot.ZIndex = _activeMapNotifications.DefaultIfEmpty(nNot).Max(n => n.ZIndex) + 1;
+                nNot.ZIndex = _activeMapNotifications.DefaultIfEmpty(nNot).Max(n => n.ZIndex) + 1;
 
-            foreach (var activeScreenNotification in _activeMapNotifications) {
-                activeScreenNotification.SlideDown(150);
+                foreach (var activeScreenNotification in _activeMapNotifications) {
+                    activeScreenNotification.SlideDown(150);
+                }
+
+                _activeMapNotifications.Add(nNot);
+
+                nNot.Show();
+            } catch (Exception) {
+                // Module was probably unloaded.
             }
-
-            _activeMapNotifications.Add(nNot);
-
-            nNot.Show();
         }
 
         private string _header;
