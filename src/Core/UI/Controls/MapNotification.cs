@@ -1,4 +1,4 @@
-﻿using Blish_HUD;
+using Blish_HUD;
 using Blish_HUD.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -106,13 +106,13 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
 
             if (!RegionsOfTyria.Instance.MuteReveal.Value) {
                 _decodeSound        = RegionsOfTyria.Instance.DecodeSound.CreateInstance();
-                _decodeSound.Volume = GameService.GameIntegration.Audio.Volume;
+                _decodeSound.Volume = RegionsOfTyria.Instance.RevealVolume.Value / 100f * GameService.GameIntegration.Audio.Volume;
 
             }
 
             if (!RegionsOfTyria.Instance.MuteVanish.Value) {
                 _vanishSound        = RegionsOfTyria.Instance.VanishSound.CreateInstance();
-                _vanishSound.Volume = 0.7f * GameService.GameIntegration.Audio.Volume;
+                _vanishSound.Volume = RegionsOfTyria.Instance.VanishVolume.Value / 100f * GameService.GameIntegration.Audio.Volume;
             }
 
             //var burnColor = new Vector4(0.4f, 0.23f, 0.0f, 0.8f);

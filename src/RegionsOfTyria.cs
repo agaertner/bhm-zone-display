@@ -47,13 +47,15 @@ namespace Nekres.Regions_Of_Tyria {
         internal SettingEntry<bool>  Dissolve;
         internal SettingEntry<bool>  UnderlineHeader;
         internal SettingEntry<bool>  OverlapHeader;
-        internal SettingEntry<bool>  MuteReveal;
-        internal SettingEntry<bool>  MuteVanish;
         internal SettingEntry<float> VerticalPosition;
         internal SettingEntry<float> FontSize;
+        internal SettingEntry<float> RevealVolume;
+        internal SettingEntry<float> VanishVolume;
+        internal SettingEntry<bool>  MuteReveal;
+        internal SettingEntry<bool>  MuteVanish;
 
-        private AsyncCache<int, Map>          _mapRepository;
-        private AsyncCache<int, List<Sector>> _sectorRepository;
+        private  AsyncCache<int, Map>          _mapRepository;
+        private  AsyncCache<int, List<Sector>> _sectorRepository;
 
         internal SoundEffect DecodeSound;
         internal SoundEffect VanishSound;
@@ -99,14 +101,6 @@ namespace Nekres.Regions_Of_Tyria {
                                                       () => "Overlap Heading", 
                                                       () => "Makes the bottom text stylishly overlap the top text.");
 
-            MuteReveal = generalCol.DefineSetting("mute_reveal", false, 
-                                                  () => "Mute Reveal Sound", 
-                                                  () => "Mutes the sound effect which plays during reveal.");
-
-            MuteVanish = generalCol.DefineSetting("mute_vanish", false,
-                                                  () => "Mute Vanish Sound",
-                                                  () => "Mutes the sound effect which plays during fade-out.");
-
             VerticalPosition = generalCol.DefineSetting("pos_y", 25f,
                                                         () => "Vertical Position",
                                                         () => "Sets the vertical position of area notifications.");
@@ -118,6 +112,23 @@ namespace Nekres.Regions_Of_Tyria {
             _hideInCombat = generalCol.DefineSetting("hide_if_combat", true, 
                                                      () => "Disable during Combat", 
                                                      () => "Disables zone notifications during combat.");
+
+            var soundCol    = settings.AddSubCollection("sound",    true, () => "Sound");
+            RevealVolume = soundCol.DefineSetting("reveal_vol", 70f,
+                                                  () => "Reveal Volume",
+                                                  () => "Sets the reveal sound volume.");
+
+            VanishVolume = soundCol.DefineSetting("vanish_vol", 50f,
+                                                  () => "Vanish Volume", 
+                                                  () => "Sets the vanish sound volume.");
+
+            MuteReveal = soundCol.DefineSetting("mute_reveal", false,
+                                                () => "Mute Reveal Sound",
+                                                () => "Mutes the sound effect which plays during reveal.");
+
+            MuteVanish = soundCol.DefineSetting("mute_vanish", false,
+                                                  () => "Mute Vanish Sound",
+                                                  () => "Mutes the sound effect which plays during fade-out.");
 
             var durationCol = settings.AddSubCollection("durations", true, () => "Durations");
 
