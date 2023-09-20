@@ -1,4 +1,4 @@
-using Blish_HUD;
+﻿using Blish_HUD;
 using Blish_HUD.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Glide;
 using Color = Microsoft.Xna.Framework.Color;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 namespace Nekres.Regions_Of_Tyria.UI.Controls {
@@ -79,6 +80,7 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
         private SoundEffectInstance _decodeSound;
         private SoundEffectInstance _vanishSound;
 
+        private Tween _anim;
         private int   _targetTop;
         private float _amount = 0.0f;
         private bool  _isFading;
@@ -227,26 +229,23 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
 
         /// <inheritdoc />
         public override void Show() {
-            //Nesting instead so we are able to set a different duration per fade direction.
-            Animation.Tweener.Tween(this, new { Opacity = 1f }, _fadeInDuration)
+            //Nesting instead of Reverse so we are able to set a different duration per fade direction.
+            _anim = Animation.Tweener.Tween(this, new { Opacity = 1f }, _fadeInDuration)
                      .OnComplete(() => {
-                         Animation.Tweener.Timer(0.2f)
+                         _anim = Animation.Tweener.Timer(0.2f)
                          .OnComplete(() => {
                             _decodeSound?.Play();
-                            Animation.Tweener.Tween(this, new {_amount = 1f}, _effectDuration)
+                            _anim = Animation.Tweener.Tween(this, new {_amount = 1f}, _effectDuration)
                             .OnComplete(() => {
                                 _decodeSound?.Stop();
-                                Animation.Tweener.Tween(this, new {Opacity = 1f}, _showDuration)
+                                _anim = Animation.Tweener.Tween(this, new {Opacity = 1f}, _showDuration)
                                 .OnComplete(() => {
                                     _isFading = true;
                                     _vanishSound?.Play();
-                                    Animation.Tweener.Tween(this, RegionsOfTyria.Instance.Dissolve.Value ? 
+                                    _anim = Animation.Tweener.Tween(this, RegionsOfTyria.Instance.Dissolve.Value ? 
                                                                       new {Opacity = 0.9f, _amount = 0f} : 
                                                                       new {Opacity = 0f}, _fadeOutDuration)
-                                    .OnComplete(() => {
-                                        _vanishSound?.Stop();
-                                        Dispose();
-                                    });
+                                    .OnComplete(Dispose);
                                 });
                             });
                         });
@@ -261,18 +260,20 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
                 return;
             }
 
-            Animation.Tweener.Tween(this, new { Opacity = 0f, Top = _targetTop }, _fadeOutDuration).OnComplete(Dispose);
+            _anim?.Cancel();
+            _anim = Animation.Tweener.Tween(this, new { Opacity = 0f, Top = _targetTop }, _fadeOutDuration).OnComplete(Dispose);
         }
 
         /// <inheritdoc />
         protected override void DisposeControl() {
+            _activeMapNotifications.Remove(this);
+            GameService.Graphics.SpriteScreen.Resized -= UpdateLocation;
+
+            _anim?.Cancel();
             _vanishSound?.Dispose();
             _decodeSound?.Dispose();
             _reveal.Effect?.Dispose();
             _decode.Effect?.Dispose();
-
-            _activeMapNotifications.Remove(this);
-            GameService.Graphics.SpriteScreen.Resized -= UpdateLocation;
 
             base.DisposeControl();
         }
