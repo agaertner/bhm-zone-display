@@ -84,6 +84,7 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
         private int   _targetTop;
         private float _amount = 0.0f;
         private bool  _isFading;
+        private bool  _dissolve;
 
         private MapNotification(string header, string text, float showDuration = 4, float fadeInDuration = 2, float fadeOutDuration = 2, float effectDuration = 0.85f) {
             _showDuration    = showDuration;
@@ -116,6 +117,8 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
                 _vanishSound        = RegionsOfTyria.Instance.VanishSound.CreateInstance();
                 _vanishSound.Volume = RegionsOfTyria.Instance.VanishVolume.Value / 100f * GameService.GameIntegration.Audio.Volume;
             }
+
+            _dissolve = RegionsOfTyria.Instance.Dissolve.Value;
 
             //var burnColor = new Vector4(0.4f, 0.23f, 0.0f, 0.8f);
             _decode.Effect.Parameters["Amount"].SetValue(0.0f);
@@ -242,7 +245,7 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
                                 .OnComplete(() => {
                                     _isFading = true;
                                     _vanishSound?.Play();
-                                    _anim = Animation.Tweener.Tween(this, RegionsOfTyria.Instance.Dissolve.Value ? 
+                                    _anim = Animation.Tweener.Tween(this, _dissolve ? 
                                                                       new {Opacity = 0.9f, _amount = 0f} : 
                                                                       new {Opacity = 0f}, _fadeOutDuration)
                                     .OnComplete(Dispose);
