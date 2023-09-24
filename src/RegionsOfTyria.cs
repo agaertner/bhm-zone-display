@@ -293,8 +293,6 @@ namespace Nekres.Regions_Of_Tyria {
             Instance = null;
         }
 
-
-
         private void OnFontSizeChanged(object sender, ValueChangedEventArgs<float> e) {
             UpdateFonts(e.NewValue / 100f);
             ShowPreviewSettingIndicator();
