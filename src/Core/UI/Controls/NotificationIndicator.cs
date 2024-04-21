@@ -10,8 +10,14 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
         private string _text;
 
         public NotificationIndicator(string header, string text) {
-            _header = header;
-            _text   = text;
+            _header = MapNotification.FilterDisplayName(header);
+            _text   = MapNotification.FilterDisplayName(text);
+
+            // Make header the main text if the latter is empty.
+            if (string.IsNullOrEmpty(_text)) {
+                _text   = _header;
+                _header = string.Empty;
+            }
 
             Size        = new Point(GameService.Graphics.SpriteScreen.Width, GameService.Graphics.SpriteScreen.Height);
             ZIndex      = Screen.MENUUI_BASEINDEX;
