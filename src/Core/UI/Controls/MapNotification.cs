@@ -142,26 +142,21 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
             if (string.IsNullOrEmpty(text)) {
                 return text;
             }
-
             // Return empty where the API doesn't provide a proper name eg. "((1089116))".
             if (text.StartsWith("((")) {
                 return string.Empty;
             }
-
-            // Remove preceding info eg. "Weekly Strike Mission: "
+            // Remove preceding info eg. "Weekly Strike Mission:".
             var idx = text.IndexOf(':');
+            if (idx >= 0 && idx++ < text.Length) {
+                text = text.Substring(idx);
+            }
+            // Remove trailing info eg. "(Squad)".
+            idx = text.IndexOf('(');
             if (idx >= 0) {
-                idx += 2; // Index of separator space.
-                if (idx < text.Length) {
-                    text = text.Substring(idx);
-                }
+                text = text.Substring(0, idx);
             }
-            // Remove trailing info eg. " (Squad)"
-            idx = text.IndexOf('(') - 1; // Index of separator space.
-            if (idx >= 0 && idx < text.Length) {
-                return text.Substring(0, idx);
-            }
-            return text;
+            return text.Trim(); // Trim left-over separator spaces.
         }
 
         private void UpdateLocation(object o, ResizedEventArgs e)
