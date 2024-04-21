@@ -91,8 +91,15 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
             _fadeInDuration  = fadeInDuration;
             _fadeOutDuration = fadeOutDuration;
             _effectDuration  = effectDuration;
-            _text            = text;
-            _header          = header;
+            _text            = FilterDisplayName(text);
+            _header          = FilterDisplayName(header);
+
+            // Make header the main text if the latter is empty.
+            if (string.IsNullOrEmpty(_text)) {
+                _text   = _header;
+                _header = string.Empty;
+            }
+
             ClipsBounds      = true;
             Opacity          = 0f;
             Size             = new Point(GameService.Graphics.SpriteScreen.Width, GameService.Graphics.SpriteScreen.Height);
@@ -110,7 +117,6 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
             if (!RegionsOfTyria.Instance.MuteReveal.Value) {
                 _decodeSound        = RegionsOfTyria.Instance.DecodeSound.CreateInstance();
                 _decodeSound.Volume = RegionsOfTyria.Instance.RevealVolume.Value / 100f * GameService.GameIntegration.Audio.Volume;
-
             }
 
             if (!RegionsOfTyria.Instance.MuteVanish.Value) {
@@ -130,6 +136,32 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
             //_reveal.Effect.Parameters["Glow"].SetValue(false);
 
             GameService.Graphics.SpriteScreen.Resized += UpdateLocation;
+        }
+
+        internal static string FilterDisplayName(string text) {
+            if (string.IsNullOrEmpty(text)) {
+                return text;
+            }
+
+            // Return empty where the API doesn't provide a proper name eg. "((1089116))".
+            if (text.StartsWith("((")) {
+                return string.Empty;
+            }
+
+            // Remove preceding info eg. "Weekly Strike Mission: "
+            var idx = text.IndexOf(':');
+            if (idx >= 0) {
+                idx += 2; // Index of separator space.
+                if (idx < text.Length) {
+                    text = text.Substring(idx);
+                }
+            }
+            // Remove trailing info eg. " (Squad)"
+            idx = text.IndexOf('(') - 1; // Index of separator space.
+            if (idx >= 0 && idx < text.Length) {
+                return text.Substring(0, idx);
+            }
+            return text;
         }
 
         private void UpdateLocation(object o, ResizedEventArgs e)
@@ -158,17 +190,13 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
             spriteBatch.End();
 
             if (_isFading) {
-
                 _reveal.Effect.Parameters["Slide"].SetValue(false);
-                
             } else if (RegionsOfTyria.Instance.Translate.Value) {
-
                 spriteBatch.Begin(_decode);
                 PaintText(this, spriteBatch, bounds, 
                           RegionsOfTyria.Instance.KrytanFont, RegionsOfTyria.Instance.KrytanFontSmall, _header, _text, 
                           RegionsOfTyria.Instance.OverlapHeader.Value, false);
                 spriteBatch.End();
-
             }
 
             spriteBatch.Begin(_reveal);
