@@ -42,7 +42,7 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             GameService.Gw2Mumble.UI.IsCompassTopRightChanged       += OnCompassTopRightChanged;
             GameService.Gw2Mumble.UI.IsMapOpenChanged               += OnMapOpenChanged;
             GameService.GameIntegration.Gw2Instance.IsInGameChanged += OnIsInGameChanged;
-            GameService.Input.Mouse.MouseMoved += OnMouseMoved;
+            GameService.Input.Mouse.MouseMoved                      += OnMouseMoved;
         }
 
         private void OnMouseMoved(object sender, MouseEventArgs e) {
