@@ -7,6 +7,7 @@ using Gw2Sharp.WebApi.V2.Models;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using Nekres.Regions_Of_Tyria.Core.Services;
 using Nekres.Regions_Of_Tyria.Geometry;
 using Nekres.Regions_Of_Tyria.UI.Controls;
 using System;
@@ -41,6 +42,7 @@ namespace Nekres.Regions_Of_Tyria {
         private SettingEntry<bool>  _toggleSectorNotification;
         private SettingEntry<bool>  _includeRegionInMapNotification;
         private SettingEntry<bool>  _includeMapInSectorNotification;
+        private SettingEntry<bool>  _showSectorOnCompass;
         private SettingEntry<bool>  _hideInCombat;
 
         internal SettingEntry<bool>  Translate;
@@ -76,6 +78,8 @@ namespace Nekres.Regions_Of_Tyria {
         private DateTime _lastUpdate = DateTime.UtcNow;
         
         private bool _unloading;
+
+        internal CompassService Compass;
 
         [ImportingConstructor]
         public RegionsOfTyria([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) {
@@ -168,6 +172,9 @@ namespace Nekres.Regions_Of_Tyria {
             _includeMapInSectorNotification = sectorCol.DefineSetting("prefix_map", true,
                                                                       () => "Include Map",
                                                                       () => "Shows the map's name above the sector's name.");
+            _showSectorOnCompass = sectorCol.DefineSetting("compass", true, 
+                                                           () => "Show Sector on Compass", 
+                                                           () => "Shows a sector's name at the top of your compass (ie. minimap).");
         }
 
         protected override void Initialize() {
@@ -177,6 +184,8 @@ namespace Nekres.Regions_Of_Tyria {
             DissolveEffect = ContentsManager.GetEffect("effects/dissolve.mgfx");
             DecodeSound = ContentsManager.GetSound("sounds/decode.wav");
             VanishSound = ContentsManager.GetSound("sounds/vanish.wav");
+
+            Compass = new CompassService();
         }
 
         protected override async Task LoadAsync() {
@@ -184,6 +193,36 @@ namespace Nekres.Regions_Of_Tyria {
         }
 
         protected override async void Update(GameTime gameTime) {
+            if (_currentMap.Id == 0) {
+                _currentMap = await _mapRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
+            }
+
+            var sector = await GetSector(_currentMap);
+            
+            if (sector == Sector.Zero) {
+                return;
+            }
+
+            // Module is unloading. Stop.
+            if (_unloading) {
+                return;
+            }
+
+            Compass?.Show(MapNotification.FilterDisplayName(sector.Name));
+
+            // Still in the same sector. Ignore.
+            if (_currentSector.Id == sector.Id) {
+                return;
+            }
+
+            // Ignore back and forth between same two sectors.
+            if (_previousSector.Id == sector.Id) {
+                return;
+            }
+
+            _previousSector = _currentSector; // Move current sector to previous sector.
+            _currentSector  = sector;         // Save new sector id as current sector id.
+
             var playerSpeed = GameService.Gw2Mumble.PlayerCharacter.GetSpeed(gameTime);
 
             if (DateTime.UtcNow.Subtract(_lastIndicatorChange).TotalMilliseconds > 250 && _notificationIndicator != null) {
@@ -224,24 +263,17 @@ namespace Nekres.Regions_Of_Tyria {
             _lastRun    = gameTime.ElapsedGameTime.TotalMilliseconds;
             _lastUpdate = DateTime.UtcNow;
 
-            if (_currentMap.Id == 0) {
-                _currentMap = await _mapRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
-            }
-
-            var sector = await GetSector(_currentMap);
-
-            if (sector == Sector.Zero) {
-                return;
-            }
-
-            // Module is unloading. Stop.
-            if (_unloading) {
-                return;
-            }
-
-            _currentSector = sector;
-
             ShowNotification(_includeMapInSectorNotification.Value ? _currentMap.Name : null, sector.Name);
+        }
+
+        private async Task<string> GetTrueMapName(Map map) {
+            // Some maps consist of just a single sector and hide their actual name in it.
+            var sectors = await _sectorRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
+            if (sectors == null || sectors.Count is < 1 or > 1) {
+                return map.Name;
+            }
+            var sector = sectors.First();
+            return sector == Sector.Zero ? map.Name : sector.Name;
         }
 
         protected override void OnModuleLoaded(EventArgs e) {
@@ -256,9 +288,11 @@ namespace Nekres.Regions_Of_Tyria {
             Dissolve.SettingChanged        += PopNotification;
             Translate.SettingChanged       += PopNotification;
             UnderlineHeader.SettingChanged += PopNotification;
-            OverlapHeader.SettingChanged  += PopNotification;
+            OverlapHeader.SettingChanged   += PopNotification;
             MuteReveal.SettingChanged      += PopNotification;
             MuteVanish.SettingChanged      += PopNotification;
+
+            _showSectorOnCompass.SettingChanged += OnShowSectorOnCompassChanged;
 
             // Base handler must be called
             base.OnModuleLoaded(e);
@@ -268,6 +302,8 @@ namespace Nekres.Regions_Of_Tyria {
         protected override void Unload() {
             _unloading = true;
 
+            _showSectorOnCompass.SettingChanged -= OnShowSectorOnCompassChanged;
+            Compass?.Dispose();
             VanishSound?.Dispose();
             DecodeSound?.Dispose();
             DissolveEffect?.Dispose();
@@ -280,7 +316,7 @@ namespace Nekres.Regions_Of_Tyria {
             Dissolve.SettingChanged         -= PopNotification;
             Translate.SettingChanged        -= PopNotification;
             UnderlineHeader.SettingChanged  -= PopNotification;
-            OverlapHeader.SettingChanged   -= PopNotification;
+            OverlapHeader.SettingChanged    -= PopNotification;
             MuteReveal.SettingChanged       -= PopNotification;
             MuteVanish.SettingChanged       -= PopNotification;
 
@@ -291,6 +327,13 @@ namespace Nekres.Regions_Of_Tyria {
 
             // All static members must be manually unset
             Instance = null;
+        }
+
+        private void OnShowSectorOnCompassChanged(object sender, ValueChangedEventArgs<bool> e) {
+            Compass?.Dispose();
+            if (e.NewValue) {
+                Compass ??= new CompassService();
+            }
         }
 
         private void OnFontSizeChanged(object sender, ValueChangedEventArgs<float> e) {
@@ -355,45 +398,16 @@ namespace Nekres.Regions_Of_Tyria {
                 return;
             }
 
-            var header = map.RegionName;
-            var mapName = map.Name;
+            var mapName = await GetTrueMapName(map);
 
-            // Some maps consist of just a single sector and hide their actual name in it.
-            if (mapName.Equals(header, StringComparison.InvariantCultureIgnoreCase)) {
-                var sector = await GetSector(map);
-
-                if (sector != Sector.Zero && !string.IsNullOrEmpty(sector.Name)) {
-                    mapName = sector.Name;
-                }
-            }
-
-            ShowNotification(_includeRegionInMapNotification.Value ? header : null, mapName);
+            ShowNotification(_includeRegionInMapNotification.Value ? map.RegionName : null, mapName);
         }
 
         private async Task<Sector> GetSector(Map map) {
             var playerLocation = GameService.Gw2Mumble.RawClient.AvatarPosition.ToContinentCoords(CoordsUnit.MUMBLE, map.MapRect, map.ContinentRect).SwapYz().ToPlane();
             var sectors = await _sectorRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
-
             var sector = sectors?.FirstOrDefault(sector => sector.Contains(playerLocation.X, playerLocation.Y));
-
-            if (sector == null) {
-                return Sector.Zero;
-            }
-
-            // Still in the same sector. Ignore.
-            if (_currentSector.Id == sector.Id) {
-                return Sector.Zero;
-            }
-
-            // Ignore back and forth between same two sectors.
-            if (_previousSector.Id == sector.Id) {
-                return Sector.Zero;
-            }
-
-            _previousSector = _currentSector; // Move current sector to previous sector.
-            _currentSector  = sector; // Save new sector id as current sector id.
-
-            return sector;
+            return sector ?? Sector.Zero;
         }
 
         private async Task<List<Sector>> RequestSectors(int mapId) {

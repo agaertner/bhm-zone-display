@@ -1,12 +1,12 @@
 ﻿using Blish_HUD;
 using Blish_HUD.Controls;
+using Glide;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Glide;
 using Color = Microsoft.Xna.Framework.Color;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 namespace Nekres.Regions_Of_Tyria.UI.Controls {
