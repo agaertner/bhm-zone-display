@@ -130,12 +130,6 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
                 return CaptureType.DoNotBlock;
             }
 
-            protected override void OnMouseMoved(MouseEventArgs e) {
-                var rel = RelativeMousePosition;
-
-                base.OnMouseMoved(e);
-            }
-
             protected override void Paint(SpriteBatch spriteBatch, Rectangle bounds) {
                 if (string.IsNullOrWhiteSpace(Text)) {
                     return;
