@@ -19,7 +19,7 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
         private static readonly Color _brightGold;
         private static readonly Color _darkGold;
 
-        private const int NOTIFICATION_COOLDOWN_MS = 2000;
+        internal const int NOTIFICATION_COOLDOWN_MS = 2000;
         private static DateTime _lastNotificationTime;
         
         private static readonly SynchronizedCollection<MapNotification> _activeMapNotifications;
@@ -28,7 +28,7 @@ namespace Nekres.Regions_Of_Tyria.UI.Controls {
 
         static MapNotification()
         {
-            _lastNotificationTime = DateTime.UtcNow;
+            _lastNotificationTime = DateTime.UtcNow.AddMilliseconds(-NOTIFICATION_COOLDOWN_MS);
             _activeMapNotifications = new SynchronizedCollection<MapNotification>();
 
             _defaultParams = new SpriteBatchParameters();

@@ -74,12 +74,12 @@ namespace Nekres.Regions_Of_Tyria {
         private DateTime              _lastIndicatorChange = DateTime.UtcNow;
         private NotificationIndicator _notificationIndicator;
 
-        private double   _lastRun;
-        private DateTime _lastUpdate = DateTime.UtcNow;
-        
-        private bool _unloading;
+        private double _lastRun;
+        private bool   _unloading;
 
-        private string _lastSectorName;
+        private DateTime _delaySectorUntil = DateTime.UtcNow;
+        private string   _lastSectorName;
+
         internal CompassService Compass;
 
         [ImportingConstructor]
@@ -190,7 +190,44 @@ namespace Nekres.Regions_Of_Tyria {
         }
 
         protected override async void Update(GameTime gameTime) {
+            if (DateTime.UtcNow.Subtract(_lastIndicatorChange).TotalMilliseconds > 250 && _notificationIndicator != null) {
+                _notificationIndicator.Dispose();
+                _notificationIndicator = null;
+            }
+
+            // Pause when sector notifications are disabled
+            if (!_toggleSectorNotification.Value) {
+                return;
+            }
+
+            var playerSpeed = GameService.Gw2Mumble.PlayerCharacter.GetSpeed(gameTime);
+
+            // Pause when the player is moving too fast between zones to avoid spam
+            if (playerSpeed > 54) {
+                return;
+            }
+
+            if (DateTime.UtcNow < _delaySectorUntil) {
+                return;
+            }
+
+            // Rate limit update
+            if (gameTime.TotalGameTime.TotalMilliseconds - _lastRun < 10) {
+                return;
+            }
+            _lastRun = gameTime.ElapsedGameTime.TotalMilliseconds;
+
             if (_currentMap.Id == 0) {
+                return;
+            }
+
+            // Pause when Gw2Mumble is inactive or the player is not in-game
+            if (!GameService.Gw2Mumble.IsAvailable || !GameService.GameIntegration.Gw2Instance.IsInGame) {
+                return;
+            }
+
+            // Pause when the player is in combat
+            if (_hideInCombat.Value && GameService.Gw2Mumble.PlayerCharacter.IsInCombat) {
                 return;
             }
 
@@ -222,46 +259,6 @@ namespace Nekres.Regions_Of_Tyria {
 
             _previousSector = _currentSector; // Move current sector to previous sector.
             _currentSector  = sector;         // Save new sector id as current sector id.
-
-            var playerSpeed = GameService.Gw2Mumble.PlayerCharacter.GetSpeed(gameTime);
-
-            if (DateTime.UtcNow.Subtract(_lastIndicatorChange).TotalMilliseconds > 250 && _notificationIndicator != null) {
-                _notificationIndicator.Dispose();
-                _notificationIndicator = null;
-            }
-
-            // Pause when Gw2Mumble is inactive or the player is not in-game
-            if (!GameService.Gw2Mumble.IsAvailable || !GameService.GameIntegration.Gw2Instance.IsInGame) {
-                return;
-            }
-
-            // Pause when sector notifications are disabled
-            if (!_toggleSectorNotification.Value) {
-                return;
-            }
-
-            // Pause when the player is moving too fast between zones to avoid spam
-            if (playerSpeed > 54) {
-                return;
-            }
-
-            // Pause when the player is in combat
-            if (_hideInCombat.Value && GameService.Gw2Mumble.PlayerCharacter.IsInCombat) {
-                return;
-            }
-
-            // Rate limit update
-            if (gameTime.TotalGameTime.TotalMilliseconds - _lastRun < 10) {
-                return;
-            }
-
-            // Cooldown to avoid spam
-            if (DateTime.UtcNow.Subtract(_lastUpdate).TotalSeconds < 5) {
-                return;
-            }
-
-            _lastRun    = gameTime.ElapsedGameTime.TotalMilliseconds;
-            _lastUpdate = DateTime.UtcNow;
 
             ShowNotification(_includeMapInSectorNotification.Value ? _currentMap.Name : null, sector.Name);
         }
@@ -392,8 +389,6 @@ namespace Nekres.Regions_Of_Tyria {
         }
 
         private async void OnMapChanged(object o, ValueEventArgs<int> e) {
-            _lastUpdate = DateTime.UtcNow;
-
             var map = await _mapRepository.GetItem(e.Value);
 
             _currentMap = map;
@@ -410,16 +405,30 @@ namespace Nekres.Regions_Of_Tyria {
             }
 
             ShowNotification(_includeRegionInMapNotification.Value ? map.RegionName : null, mapName);
+
+            var delaySectorMs = (int)Math.Round(_showDuration.Value * 10f * 5f
+                                      + _fadeOutDuration.Value * 10f * 3f);
+            _delaySectorUntil = DateTime.UtcNow.AddMilliseconds(delaySectorMs);
         }
 
         private async Task<Sector> GetSector(Map map) {
             var playerLocation = GameService.Gw2Mumble.RawClient.AvatarPosition.ToContinentCoords(CoordsUnit.MUMBLE, map.MapRect, map.ContinentRect).SwapYz().ToPlane();
-            var sectors = await _sectorRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
-            var sector = sectors?.FirstOrDefault(sector => sector.Contains(playerLocation.X, playerLocation.Y));
+
+            if (_sectorRepository.HasItem(map.Id) 
+             && !_sectorRepository.ItemComplete(map.Id)) {
+                return Sector.Zero;
+            }
+
+            var sectors = await _sectorRepository.GetItem(map.Id);
+            var sector  = sectors?.FirstOrDefault(sector => sector.Contains(playerLocation.X, playerLocation.Y));
             return sector ?? Sector.Zero;
         }
 
         private async Task<List<Sector>> RequestSectors(int mapId) {
+            if (_mapRepository.HasItem(mapId) && !_mapRepository.ItemComplete(mapId)) {
+                return Enumerable.Empty<Sector>().ToList();
+            }
+
             var map = await _mapRepository.GetItem(mapId);
 
             var geometryZone = new List<Sector>();
