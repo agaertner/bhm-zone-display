@@ -79,6 +79,7 @@ namespace Nekres.Regions_Of_Tyria {
         
         private bool _unloading;
 
+        private string _lastSectorName;
         internal CompassService Compass;
 
         [ImportingConstructor]
@@ -188,13 +189,9 @@ namespace Nekres.Regions_Of_Tyria {
             Compass = new CompassService();
         }
 
-        protected override async Task LoadAsync() {
-            _currentMap = await _mapRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
-        }
-
         protected override async void Update(GameTime gameTime) {
             if (_currentMap.Id == 0) {
-                _currentMap = await _mapRepository.GetItem(GameService.Gw2Mumble.CurrentMap.Id);
+                return;
             }
 
             var sector = await GetSector(_currentMap);
@@ -208,7 +205,10 @@ namespace Nekres.Regions_Of_Tyria {
                 return;
             }
 
-            Compass?.Show(MapNotification.FilterDisplayName(sector.Name));
+            _lastSectorName = MapNotification.FilterDisplayName(sector.Name);
+            if (_showSectorOnCompass.Value) {
+                Compass?.Show(_lastSectorName);
+            }
 
             // Still in the same sector. Ignore.
             if (_currentSector.Id == sector.Id) {
@@ -294,6 +294,8 @@ namespace Nekres.Regions_Of_Tyria {
 
             _showSectorOnCompass.SettingChanged += OnShowSectorOnCompassChanged;
 
+            OnMapChanged(GameService.Gw2Mumble, new ValueEventArgs<int>(GameService.Gw2Mumble.CurrentMap.Id));
+
             // Base handler must be called
             base.OnModuleLoaded(e);
         }
@@ -331,8 +333,10 @@ namespace Nekres.Regions_Of_Tyria {
 
         private void OnShowSectorOnCompassChanged(object sender, ValueChangedEventArgs<bool> e) {
             Compass?.Dispose();
+            Compass = null;
             if (e.NewValue) {
-                Compass ??= new CompassService();
+                Compass = new CompassService();
+                Compass.Show(_lastSectorName);
             }
         }
 
@@ -399,6 +403,11 @@ namespace Nekres.Regions_Of_Tyria {
             }
 
             var mapName = await GetTrueMapName(map);
+
+            _lastSectorName = MapNotification.FilterDisplayName(mapName);
+            if (_showSectorOnCompass.Value) {
+                Compass?.Show(_lastSectorName);
+            }
 
             ShowNotification(_includeRegionInMapNotification.Value ? map.RegionName : null, mapName);
         }

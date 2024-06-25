@@ -5,7 +5,7 @@ using Gw2Sharp.Models;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.Linq;
+using System.Collections.Generic;
 
 namespace Nekres.Regions_Of_Tyria.Core.Services {
     internal class CompassService : IDisposable {
@@ -37,12 +37,26 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             }
         }
 
+        private HashSet<int> _noCompassMaps = new(new[] {
+            935, // SAB Lobby
+            895, // SAB World 1
+            934, // SAB World 2
+        });
+
         public CompassService() {
             GameService.Gw2Mumble.UI.CompassSizeChanged             += OnCompassSizeChanged;
             GameService.Gw2Mumble.UI.IsCompassTopRightChanged       += OnCompassTopRightChanged;
             GameService.Gw2Mumble.UI.IsMapOpenChanged               += OnMapOpenChanged;
             GameService.GameIntegration.Gw2Instance.IsInGameChanged += OnIsInGameChanged;
             GameService.Input.Mouse.MouseMoved                      += OnMouseMoved;
+            GameService.Gw2Mumble.CurrentMap.MapChanged             += OnMapChanged;
+        }
+
+        private void OnMapChanged(object sender, ValueEventArgs<int> e) {
+            if (!HasCompass()) {
+                _label?.Dispose();
+                _label = null;
+            }
         }
 
         private void OnMouseMoved(object sender, MouseEventArgs e) {
@@ -55,9 +69,23 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             }
         }
 
+        private bool HasCompass() {
+            return !_noCompassMaps.Contains(GameService.Gw2Mumble.CurrentMap.Id);
+        }
+
         public void Show(string text) {
+            if (string.IsNullOrEmpty(text)) {
+                _label?.Dispose();
+                _label = null;
+                return;
+            }
+
+            if (!HasCompass()) {
+                return;
+            }
+
             _label ??= new CompassRegionDisplay {
-                Font = GameService.Content.DefaultFont14,
+                Font = GameService.Content.DefaultFont16,
                 Height = 20,
                 ZIndex = Screen.MENUUI_BASEINDEX
             };
@@ -66,10 +94,6 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             _label.Text   = text;
 
             UpdateCompass();
-
-            _label.Left   = _compass.Left;
-            _label.Top    = _compass.Top;
-            _label.Width  = _compass.Width;
         }
 
         private void OnCompassSizeChanged(object sender, ValueEventArgs<Size> e) {
@@ -106,9 +130,10 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             _compass = new Rectangle(x, y, width, height);
 
             if (_label != null) {
-                _label.Left  = _compass.Left;
-                _label.Top   = _compass.Top;
-                _label.Width = _compass.Width;
+                _label.Left   = _compass.Left;
+                _label.Top    = _compass.Top;
+                _label.Width  = _compass.Width;
+                _label.Height = _compass.Height;
             }
         }
 
@@ -118,13 +143,21 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             GameService.Gw2Mumble.UI.IsMapOpenChanged               -= OnMapOpenChanged;
             GameService.GameIntegration.Gw2Instance.IsInGameChanged -= OnIsInGameChanged;
             GameService.Input.Mouse.MouseMoved                      -= OnMouseMoved;
+            GameService.Gw2Mumble.CurrentMap.MapChanged             -= OnMapChanged;
             _label?.Dispose();
+            _label = null;
         }
 
         private class CompassRegionDisplay : Control {
 
             public string Text;
             public MonoGame.Extended.BitmapFonts.BitmapFont Font;
+
+            private Texture2D _bgTex;
+
+            public CompassRegionDisplay() {
+                _bgTex = GameService.Content.GetTexture("fade-down-46");
+            }
 
             protected override CaptureType CapturesInput() {
                 return CaptureType.DoNotBlock;
@@ -135,20 +168,14 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
                     return;
                 }
 
-                spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, bounds, Color.Black * 0.25f);
+                spriteBatch.DrawOnCtrl(this, _bgTex, new Rectangle(bounds.X, bounds.Y, bounds.Width, 30), _bgTex.Bounds, Color.White * 0.7f);
+                //spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, bounds, Color.Black * 0.25f);
 
-                var lines  = Text.Split(BREAKRULE).ToList();
-                int height = 0;
-                for (int i = 0; i < lines.Count; i++) {
-                    string line = lines[i];
-                    int lineHeight = (int)Math.Round(Font.MeasureString(line).Height) + 4;
-                    if (i > 0) {
-                        lineHeight += Font.LineHeight;
-                    }
-                    spriteBatch.DrawStringOnCtrl(this, line, Font, new Rectangle(0, 0, bounds.Width, lineHeight + height), Color.White, false, true, 1, HorizontalAlignment.Center);
-                    height += 20;
+                int height = 5;
+                foreach (var line in Text.Split(BREAKRULE)) {
+                    spriteBatch.DrawStringOnCtrl(this, line, Font, new Rectangle(0, height, bounds.Width, bounds.Height), Color.White, false, true, 1, HorizontalAlignment.Center, VerticalAlignment.Top);
+                    height += Font.LineHeight;
                 }
-                this.Height = height;
             }
         }
     }
