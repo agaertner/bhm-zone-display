@@ -34,16 +34,18 @@ namespace Nekres.Regions_Of_Tyria {
 
         #endregion
 
-        private SettingEntry<float> _showDuration;
-        private SettingEntry<float> _fadeInDuration;
-        private SettingEntry<float> _fadeOutDuration;
-        private SettingEntry<float> _effectDuration;
-        private SettingEntry<bool>  _toggleMapNotification;
-        private SettingEntry<bool>  _toggleSectorNotification;
-        private SettingEntry<bool>  _includeRegionInMapNotification;
-        private SettingEntry<bool>  _includeMapInSectorNotification;
-        private SettingEntry<bool>  _showSectorOnCompass;
-        private SettingEntry<bool>  _hideInCombat;
+        private  SettingEntry<float> _showDuration;
+        private  SettingEntry<float> _fadeInDuration;
+        private  SettingEntry<float> _fadeOutDuration;
+        private  SettingEntry<float> _effectDuration;
+        private  SettingEntry<bool>  _toggleMapNotification;
+        private  SettingEntry<bool>  _toggleSectorNotification;
+        private  SettingEntry<bool>  _includeRegionInMapNotification;
+        private  SettingEntry<bool>  _includeMapInSectorNotification;
+        private  SettingEntry<bool>  _showSectorOnCompass;
+        private  SettingEntry<bool>  _hideInCombat;
+
+        internal SettingEntry<bool>  ShowBackgroundOnCompass;
 
         internal SettingEntry<bool>  Translate;
         internal SettingEntry<bool>  Dissolve;
@@ -173,9 +175,14 @@ namespace Nekres.Regions_Of_Tyria {
             _includeMapInSectorNotification = sectorCol.DefineSetting("prefix_map", true,
                                                                       () => "Include Map",
                                                                       () => "Shows the map's name above the sector's name.");
-            _showSectorOnCompass = sectorCol.DefineSetting("compass", true, 
-                                                           () => "Show Sector on Compass", 
-                                                           () => "Shows a sector's name at the top of your compass (ie. minimap).");
+
+            var compassCol = settings.AddSubCollection("compass", true, () => "Compass / Minimap");
+            _showSectorOnCompass = compassCol.DefineSetting("enabled", true, 
+                                                            () => "Show Sector on Compass", 
+                                                            () => "Shows a sector's name at the top of your compass (ie. minimap).");
+            ShowBackgroundOnCompass = compassCol.DefineSetting("background", false, 
+                                                               () => "Show Sector with Background",
+                                                               () => "Displays the black faded bar behind a sector's name at the top of your compass (ie. minimap).");
         }
 
         protected override void Initialize() {
@@ -193,11 +200,6 @@ namespace Nekres.Regions_Of_Tyria {
             if (DateTime.UtcNow.Subtract(_lastIndicatorChange).TotalMilliseconds > 250 && _notificationIndicator != null) {
                 _notificationIndicator.Dispose();
                 _notificationIndicator = null;
-            }
-
-            // Pause when sector notifications are disabled
-            if (!_toggleSectorNotification.Value) {
-                return;
             }
 
             var playerSpeed = GameService.Gw2Mumble.PlayerCharacter.GetSpeed(gameTime);
@@ -240,6 +242,11 @@ namespace Nekres.Regions_Of_Tyria {
             _lastSectorName = MapNotification.FilterDisplayName(sector.Name);
             if (_showSectorOnCompass.Value) {
                 Compass?.Show(_lastSectorName);
+            }
+
+            // Pause when sector notifications are disabled
+            if (!_toggleSectorNotification.Value) {
+                return;
             }
 
             // Pause when the player is moving too fast between zones to avoid spam

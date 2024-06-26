@@ -50,6 +50,11 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             GameService.GameIntegration.Gw2Instance.IsInGameChanged += OnIsInGameChanged;
             GameService.Input.Mouse.MouseMoved                      += OnMouseMoved;
             GameService.Gw2Mumble.CurrentMap.MapChanged             += OnMapChanged;
+            GameService.Graphics.SpriteScreen.ContentResized        += OnScreenResized;
+        }
+
+        private void OnScreenResized(object sender, RegionChangedEventArgs e) {
+            UpdateCompass();
         }
 
         private void OnMapChanged(object sender, ValueEventArgs<int> e) {
@@ -124,7 +129,6 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             int x      = GameService.Graphics.SpriteScreen.ContentRegion.Width - width;
             int y      = 0;
 
-            var l = GameService.Gw2Mumble.RawClient.Compass;
             if (!GameService.Gw2Mumble.UI.IsCompassTopRight) {
                 y += GameService.Graphics.SpriteScreen.ContentRegion.Height - height - 40;
             }
@@ -146,6 +150,7 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             GameService.GameIntegration.Gw2Instance.IsInGameChanged -= OnIsInGameChanged;
             GameService.Input.Mouse.MouseMoved                      -= OnMouseMoved;
             GameService.Gw2Mumble.CurrentMap.MapChanged             -= OnMapChanged;
+            GameService.Graphics.SpriteScreen.ContentResized        -= OnScreenResized;
             _label?.Dispose();
             _label = null;
         }
@@ -156,9 +161,22 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             public MonoGame.Extended.BitmapFonts.BitmapFont Font;
 
             private Texture2D _bgTex;
+            private bool      _showBackground;
 
             public CompassRegionDisplay() {
-                _bgTex = GameService.Content.GetTexture("fade-down-46");
+                _bgTex          = GameService.Content.GetTexture("fade-down-46");
+                _showBackground = RegionsOfTyria.Instance.ShowBackgroundOnCompass.Value;
+
+                RegionsOfTyria.Instance.ShowBackgroundOnCompass.SettingChanged += OnShowBackgroundOnCompassChanged;
+            }
+
+            private void OnShowBackgroundOnCompassChanged(object sender, ValueChangedEventArgs<bool> e) {
+                _showBackground = e.NewValue;
+            }
+
+            protected override void DisposeControl() {
+                RegionsOfTyria.Instance.ShowBackgroundOnCompass.SettingChanged -= OnShowBackgroundOnCompassChanged;
+                base.DisposeControl();
             }
 
             protected override CaptureType CapturesInput() {
@@ -170,8 +188,10 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
                     return;
                 }
 
-                spriteBatch.DrawOnCtrl(this, _bgTex, new Rectangle(bounds.X, bounds.Y, bounds.Width, 30), _bgTex.Bounds, Color.White * 0.7f);
-                //spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, bounds, Color.Black * 0.25f);
+                if (_showBackground) {
+                    spriteBatch.DrawOnCtrl(this, _bgTex, new Rectangle(bounds.X, bounds.Y, bounds.Width, 30), _bgTex.Bounds, Color.White * 0.7f);
+                    //spriteBatch.DrawOnCtrl(this, ContentService.Textures.Pixel, bounds, Color.Black * 0.25f);
+                }
 
                 int height = 5;
                 foreach (var line in Text.Split(BREAKRULE)) {
