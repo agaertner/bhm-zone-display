@@ -202,11 +202,6 @@ namespace Nekres.Regions_Of_Tyria {
 
             var playerSpeed = GameService.Gw2Mumble.PlayerCharacter.GetSpeed(gameTime);
 
-            // Pause when the player is moving too fast between zones to avoid spam
-            if (playerSpeed > 54) {
-                return;
-            }
-
             if (DateTime.UtcNow < _delaySectorUntil) {
                 return;
             }
@@ -245,6 +240,11 @@ namespace Nekres.Regions_Of_Tyria {
             _lastSectorName = MapNotification.FilterDisplayName(sector.Name);
             if (_showSectorOnCompass.Value) {
                 Compass?.Show(_lastSectorName);
+            }
+
+            // Pause when the player is moving too fast between zones to avoid spam
+            if (playerSpeed > 54) {
+                return;
             }
 
             // Still in the same sector. Ignore.
