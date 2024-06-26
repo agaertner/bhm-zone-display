@@ -70,7 +70,8 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
         }
 
         private bool HasCompass() {
-            return !_noCompassMaps.Contains(GameService.Gw2Mumble.CurrentMap.Id);
+            return !_noCompassMaps.Contains(GameService.Gw2Mumble.CurrentMap.Id)
+                && GameService.Gw2Mumble.RawClient.Compass is {Width: > 0, Height: > 0};
         }
 
         public void Show(string text) {
@@ -123,6 +124,7 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             int x      = GameService.Graphics.SpriteScreen.ContentRegion.Width - width;
             int y      = 0;
 
+            var l = GameService.Gw2Mumble.RawClient.Compass;
             if (!GameService.Gw2Mumble.UI.IsCompassTopRight) {
                 y += GameService.Graphics.SpriteScreen.ContentRegion.Height - height - 40;
             }
@@ -164,7 +166,7 @@ namespace Nekres.Regions_Of_Tyria.Core.Services {
             }
 
             protected override void Paint(SpriteBatch spriteBatch, Rectangle bounds) {
-                if (string.IsNullOrWhiteSpace(Text)) {
+                if (string.IsNullOrWhiteSpace(Text) || !GameService.Gw2Mumble.IsAvailable) {
                     return;
                 }
 
